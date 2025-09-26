@@ -24,7 +24,11 @@ app.set("trust proxy", 1);
 
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "https://uplive-the-indian-social-media-qlqj.vercel.app",
+      process.env.CLIENT_URL,
+    ].filter(Boolean),
     methods: ["GET", "POST"],
   },
 });
@@ -34,7 +38,11 @@ app.use(helmet());
 app.use(compression());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "https://uplive-the-indian-social-media-qlqj.vercel.app",
+      process.env.CLIENT_URL,
+    ].filter(Boolean),
     credentials: true,
   })
 );
