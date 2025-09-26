@@ -161,6 +161,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/settings');
   };
 
+  const handleNotificationsClick = async () => {
+    setNotificationsOpen(true);
+    // Mark all notifications as read when opening modal (clear badge)
+    try {
+      await notificationsApi.markAllAsRead();
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
+  };
+
   return (
     <Box>
       <StyledAppBar position="sticky">
@@ -226,16 +237,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </IconButton>
               
               <IconButton
-                onClick={async () => {
-                  setNotificationsOpen(true);
-                  // Mark all notifications as read when opening modal (clear badge)
-                  try {
-                    await notificationsApi.markAllAsRead();
-                    setUnreadCount(0);
-                  } catch (error) {
-                    console.error('Error marking notifications as read:', error);
-                  }
-                }}
+                onClick={handleNotificationsClick}
               >
                 <Badge badgeContent={unreadCount} color="error">
                   <HeartIcon />
@@ -334,6 +336,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <MobileBottomNav
           value={bottomNavValue}
           onChange={(event, newValue) => {
+            // Handle notifications separately as it opens a modal, not navigation
+            if (newValue === 'notifications') {
+              handleNotificationsClick();
+              return;
+            }
             setBottomNavValue(newValue);
             handleNavigation(newValue);
           }}
@@ -352,6 +359,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             label="Create"
             value="/create"
             icon={<AddIcon />}
+          />
+          <BottomNavigationAction
+            label="Notifications"
+            value="notifications"
+            icon={
+              <Badge badgeContent={unreadCount} color="error">
+                <HeartIcon />
+              </Badge>
+            }
           />
           <BottomNavigationAction
             label="Messages"
