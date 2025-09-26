@@ -27,9 +27,10 @@ const io = socketIo(server, {
     origin: [
       "http://localhost:3000",
       "https://uplive-the-indian-social-media-qlqj.vercel.app",
-      process.env.CLIENT_URL,
-    ].filter(Boolean),
+      "https://uplive-the-indian-social-media.vercel.app",
+    ],
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
@@ -41,9 +42,11 @@ app.use(
     origin: [
       "http://localhost:3000",
       "https://uplive-the-indian-social-media-qlqj.vercel.app",
-      process.env.CLIENT_URL,
-    ].filter(Boolean),
+      "https://uplive-the-indian-social-media.vercel.app",
+    ],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
