@@ -54,8 +54,34 @@ const MobileBottomNav = styled(BottomNavigation)(({ theme }) => ({
   right: 0,
   zIndex: 1000,
   borderTop: `1px solid ${theme.palette.divider}`,
+  height: '60px',
+  '& .MuiBottomNavigationAction-root': {
+    minWidth: 'auto',
+    padding: '6px 4px',
+    fontSize: '0.65rem',
+    '& .MuiBottomNavigationAction-label': {
+      fontSize: '0.6rem',
+      '&.Mui-selected': {
+        fontSize: '0.65rem',
+      },
+    },
+  },
   [theme.breakpoints.up('md')]: {
     display: 'none', // Hide on desktop
+  },
+  [theme.breakpoints.down('sm')]: {
+    '& .MuiBottomNavigationAction-root': {
+      minWidth: '50px',
+      padding: '4px 2px',
+      fontSize: '0.55rem',
+      '& .MuiBottomNavigationAction-label': {
+        fontSize: '0.55rem',
+        marginTop: '2px',
+        '&.Mui-selected': {
+          fontSize: '0.6rem',
+        },
+      },
+    },
   },
 }));
 
@@ -348,44 +374,44 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <BottomNavigationAction
             label="Home"
             value="/"
-            icon={<HomeIcon />}
+            icon={<HomeIcon sx={{ fontSize: 20 }} />}
           />
           <BottomNavigationAction
             label="Search"
             value="/search"
-            icon={<SearchIcon />}
+            icon={<SearchIcon sx={{ fontSize: 20 }} />}
           />
           <BottomNavigationAction
-            label="Create"
+            label="Add"
             value="/create"
-            icon={<AddIcon />}
+            icon={<AddIcon sx={{ fontSize: 20 }} />}
           />
           <BottomNavigationAction
-            label="Notifications"
+            label="Likes"
             value="notifications"
             icon={
               <Badge badgeContent={unreadCount} color="error">
-                <HeartIcon />
+                <HeartIcon sx={{ fontSize: 20 }} />
               </Badge>
             }
           />
           <BottomNavigationAction
-            label="Messages"
+            label="Chat"
             value="/messages"
             icon={
               <Badge badgeContent={unreadMessagesCount} color="error">
-                <MessageIcon />
+                <MessageIcon sx={{ fontSize: 20 }} />
               </Badge>
             }
           />
           <BottomNavigationAction
-            label="Profile"
+            label="Me"
             value={`/${user?.username}`}
             icon={
               <Avatar
                 src={user?.profilePicture}
                 alt={user?.username}
-                sx={{ width: 24, height: 24 }}
+                sx={{ width: 20, height: 20 }}
               />
             }
           />
@@ -396,7 +422,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         maxWidth="lg" 
         sx={{ 
           pt: 2, 
-          pb: isMobile ? 10 : 4, // Extra bottom padding for mobile bottom nav
+          pb: isMobile ? 8 : 4, // Reduced bottom padding for smaller mobile nav
           px: { xs: 1, sm: 2, md: 3 }
         }}
       >
