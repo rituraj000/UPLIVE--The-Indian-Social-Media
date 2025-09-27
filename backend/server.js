@@ -190,6 +190,19 @@ app.get("/api/test-direct", (req, res) => {
   });
 });
 
+// Environment test endpoint
+app.get("/api/test/env", (req, res) => {
+  res.json({
+    environment: process.env.NODE_ENV,
+    emailConfigured: {
+      EMAIL_USER: process.env.EMAIL_USER ? "✅ Set" : "❌ Missing",
+      EMAIL_PASS: process.env.EMAIL_PASS ? "✅ Set" : "❌ Missing",
+      ENABLE_REAL_EMAIL: process.env.ENABLE_REAL_EMAIL || "❌ Not Set",
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

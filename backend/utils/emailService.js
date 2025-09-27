@@ -15,18 +15,19 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
     ) {
       try {
         const transporter = nodemailer.createTransport({
-          host: "smtp.gmail.com",
-          port: 587,
-          secure: false,
+          service: "gmail", // Use Gmail service instead of manual config
           auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS.replace(/\s/g, ""), // Remove any spaces
           },
+          pool: true, // Enable connection pooling
+          maxConnections: 1,
+          maxMessages: 3,
+          rateDelta: 1000,
+          rateLimit: 3,
           tls: {
             rejectUnauthorized: false,
           },
-          connectionTimeout: 10000, // 10 second connection timeout
-          socketTimeout: 15000, // 15 second socket timeout
         });
 
         const mailOptions = {
