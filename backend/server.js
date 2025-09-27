@@ -150,6 +150,34 @@ app.use("/api/notifications", notificationRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
+  res.json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    database:
+      mongoose.connection.readyState === 1 ? "Connected" : "Disconnected",
+    email: process.env.EMAIL_USER ? "Configured" : "Not Configured",
+  });
+});
+
+// Root endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "UPLIVE Backend API",
+    version: "1.0.0",
+    status: "Running",
+    endpoints: {
+      health: "/api/health",
+      auth: "/api/auth/*",
+      users: "/api/users/*",
+      posts: "/api/posts/*",
+      stories: "/api/stories/*",
+      messages: "/api/messages/*",
+      notifications: "/api/notifications/*",
+    },
+  });
+});
+app.get("/api/health", (req, res) => {
   res.json({ message: "UPLIVE API is running!" });
 });
 
