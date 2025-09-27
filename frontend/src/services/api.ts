@@ -85,6 +85,13 @@ export const authApi = {
   }) => api.post<AuthResponse>('/auth/register', userData),
   
   getCurrentUser: () => api.get<User>('/auth/me'),
+  
+  // OTP functionality
+  sendOTP: (email: string) =>
+    api.post<{ success: boolean; message: string; expiresIn?: number }>('/auth/send-otp', { email }),
+  
+  verifyOTP: (email: string, otp: string) =>
+    api.post<{ success: boolean; message: string }>('/auth/verify-otp', { email, otp }),
 };
 
 // Users API
