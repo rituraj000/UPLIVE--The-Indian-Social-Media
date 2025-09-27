@@ -1,4 +1,31 @@
-const nodemailer = require("nodemailer");
+co; // Create transporter with fallback options
+const createTransporter = () => {
+  // Try Gmail first
+  const gmailTransporter = nodemailer.createTransporter({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  // Fallback to SMTP with different settings
+  const smtpTransporter = nodemailer.createTransporter({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+
+  return smtpTransporter; // Use SMTP version for better compatibility
+};
+iler = require("nodemailer");
 
 // Create transporter
 const createTransporter = () => {
@@ -46,24 +73,41 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
 
     const transporter = createTransporter();
 
-    // Test connection with timeout
+    // Test connection with timeout and detailed logging
     console.log("🔍 Testing SMTP connection...");
-    await new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        reject(new Error("SMTP connection timeout"));
-      }, 10000); // 10 second timeout for connection test
-
-      transporter.verify((error, success) => {
-        clearTimeout(timeoutId);
-        if (error) {
-          console.error("SMTP verification failed:", error);
-          reject(error);
-        } else {
-          console.log("✅ SMTP connection verified");
-          resolve(success);
-        }
-      });
+    console.log("Email config:", {
+      user: process.env.EMAIL_USER,
+      passLength: process.env.EMAIL_PASS?.length,
+      service: "gmail",
     });
+
+    try {
+      await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error("SMTP connection timeout"));
+        }, 10000); // 10 second timeout for connection test
+
+        transporter.verify((error, success) => {
+          clearTimeout(timeoutId);
+          if (error) {
+            console.error("SMTP verification failed:", {
+              message: error.message,
+              code: error.code,
+              command: error.command,
+            });
+            reject(error);
+          } else {
+            console.log("✅ SMTP connection verified successfully");
+            resolve(success);
+          }
+        });
+      });
+    } catch (connectionError) {
+      console.error(
+        "❌ SMTP connection failed, trying alternative approach..."
+      );
+      // Don't fail completely, try to send anyway
+    }
 
     const mailOptions = {
       from: {
@@ -152,20 +196,24 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
     console.log("✅ OTP email sent successfully:", result.messageId);
     return { success: true, messageId: result.messageId };
   } catch (error) {
-    console.error("❌ Error sending OTP email:", error.message);
-    console.error("Error details:", {
+    console.error("❌ Error sending OTP email:");
+    console.error("Error message:", error.message);
+    console.error("Error code:", error.code);
+    console.error("Full error:", {
       code: error.code,
       response: error.response,
+      responseCode: error.responseCode,
       command: error.command,
     });
 
-    // Return specific error messages
+    // Return specific error messages based on error type
     if (error.message.includes("timeout")) {
       return {
         success: false,
         error: "Email service timeout. Please try again.",
       };
-    } else if (error.code === "EAUTH") {
+    } else if (error.code === "EAUTH" || error.responseCode === 535) {
+      console.error("Gmail authentication failed - check App Password");
       return {
         success: false,
         error: "Email authentication failed. Please contact support.",
@@ -174,6 +222,11 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
       return {
         success: false,
         error: "Email service unavailable. Please try again later.",
+      };
+    } else if (error.code === "ECONNECTION" || error.code === "ESOCKET") {
+      return {
+        success: false,
+        error: "Network connection failed. Please try again.",
       };
     } else {
       return {
