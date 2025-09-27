@@ -24,7 +24,8 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
       !process.env.EMAIL_USER ||
       !process.env.EMAIL_PASS ||
       process.env.EMAIL_USER === "your-actual-email@gmail.com" ||
-      process.env.EMAIL_PASS === "your-16-digit-app-password"
+      process.env.EMAIL_PASS === "your-16-digit-app-password" ||
+      process.env.NODE_ENV === "development"
     ) {
       console.log("=".repeat(50));
       console.log("📧 DEVELOPMENT MODE - EMAIL OTP");
@@ -32,6 +33,7 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
       console.log(`To: ${email}`);
       console.log(`Name: ${fullName}`);
       console.log(`OTP: ${otp}`);
+      console.log(`Environment: ${process.env.NODE_ENV}`);
       console.log("=".repeat(50));
 
       return { success: true, messageId: "dev-mode-" + Date.now() };
@@ -39,7 +41,29 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
 
     // Production mode: Send real emails
     console.log(`📧 Sending OTP email to: ${email}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
+    console.log(`Email User: ${process.env.EMAIL_USER}`);
+
     const transporter = createTransporter();
+
+    // Test connection with timeout
+    console.log("🔍 Testing SMTP connection...");
+    await new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error("SMTP connection timeout"));
+      }, 10000); // 10 second timeout for connection test
+
+      transporter.verify((error, success) => {
+        clearTimeout(timeoutId);
+        if (error) {
+          console.error("SMTP verification failed:", error);
+          reject(error);
+        } else {
+          console.log("✅ SMTP connection verified");
+          resolve(success);
+        }
+      });
+    });
 
     const mailOptions = {
       from: {
@@ -108,12 +132,55 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
       `,
     };
 
-    const result = await transporter.sendMail(mailOptions);
-    console.log("OTP email sent successfully:", result.messageId);
+    console.log("📤 Sending email...");
+    // Send email with timeout
+    const result = await new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error("Email sending timeout"));
+      }, 15000); // 15 second timeout for sending
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        clearTimeout(timeoutId);
+        if (error) {
+          reject(error);
+        } else {
+          resolve(info);
+        }
+      });
+    });
+
+    console.log("✅ OTP email sent successfully:", result.messageId);
     return { success: true, messageId: result.messageId };
   } catch (error) {
-    console.error("Error sending OTP email:", error);
-    return { success: false, error: error.message };
+    console.error("❌ Error sending OTP email:", error.message);
+    console.error("Error details:", {
+      code: error.code,
+      response: error.response,
+      command: error.command,
+    });
+
+    // Return specific error messages
+    if (error.message.includes("timeout")) {
+      return {
+        success: false,
+        error: "Email service timeout. Please try again.",
+      };
+    } else if (error.code === "EAUTH") {
+      return {
+        success: false,
+        error: "Email authentication failed. Please contact support.",
+      };
+    } else if (error.code === "ENOTFOUND") {
+      return {
+        success: false,
+        error: "Email service unavailable. Please try again later.",
+      };
+    } else {
+      return {
+        success: false,
+        error: "Failed to send verification email. Please try again.",
+      };
+    }
   }
 };
 
