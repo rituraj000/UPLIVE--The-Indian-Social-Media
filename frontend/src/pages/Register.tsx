@@ -16,7 +16,7 @@ import { Check as CheckIcon, Close as CloseIcon } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { usersApi } from '../services/api';
+import { usersApi } from '../services/api'; // Assuming this is where checkUsername is
 
 const RegisterContainer = styled(Container)({
   display: 'flex',
@@ -69,14 +69,15 @@ const Register: React.FC = () => {
       setUsernameStatus({
         checking: false,
         available: null,
-        message: ''
+        message: 'Username must be at least 3 characters.'
       });
       return;
     }
 
-    setUsernameStatus(prev => ({ ...prev, checking: true }));
+    setUsernameStatus(prev => ({ ...prev, checking: true, message: 'Checking...' }));
     
     try {
+      // NOTE: Update api.ts to ensure this points to the new backend route
       const response = await usersApi.checkUsername(username);
       setUsernameStatus({
         checking: false,
@@ -84,16 +85,20 @@ const Register: React.FC = () => {
         message: response.data.message
       });
     } catch (error) {
+      console.error("Error checking username:", error);
       setUsernameStatus({
         checking: false,
         available: null,
-        message: 'Error checking username'
+        message: 'Could not check availability. Try again.'
       });
     }
   }, []);
 
   // Debounce username checking
   useEffect(() => {
+    // Clear previous status when the user starts typing again
+    setUsernameStatus(prev => ({ ...prev, available: null, message: '' }));
+    
     const timeoutId = setTimeout(() => {
       if (formData.username) {
         checkUsername(formData.username);
@@ -125,6 +130,12 @@ const Register: React.FC = () => {
       return;
     }
     
+    // Client-side quick check to match backend validation (optional, but good practice)
+    if (formData.password.length < 6) {
+        setError('Password must be at least 6 characters long.');
+        return;
+    }
+
     setLoading(true);
 
     try {
@@ -132,8 +143,10 @@ const Register: React.FC = () => {
       if (success) {
         navigate('/welcome');
       }
-    } catch (err) {
-      setError('Registration failed. Please try again.');
+    } catch (err: any) {
+      // Use the specific error message thrown from AuthContext
+      const errorMessage = err.message || 'Registration failed. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -206,7 +219,7 @@ const Register: React.FC = () => {
               
               <TextField
                 fullWidth
-                label="Password"
+                label="Password (min 6 characters)"
                 name="password"
                 type="password"
                 value={formData.password}
@@ -220,7 +233,7 @@ const Register: React.FC = () => {
                 fullWidth
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
-                disabled={loading || usernameStatus.checking || usernameStatus.available === false}
+                disabled={loading || usernameStatus.checking || usernameStatus.available === false || !formData.password || formData.password.length < 6}
               >
                 {loading ? 'Signing up...' : 'Sign up'}
               </Button>
