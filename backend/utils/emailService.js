@@ -6,20 +6,24 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
     // For production, try real email first, fallback to logging
     console.log(`📧 Attempting to send OTP to: ${email}`);
     console.log(`Environment: ${process.env.NODE_ENV}`);
-    
-    if (process.env.NODE_ENV === "production" && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+
+    if (
+      process.env.NODE_ENV === "production" &&
+      process.env.EMAIL_USER &&
+      process.env.EMAIL_PASS
+    ) {
       try {
-        const transporter = nodemailer.createTransporter({
+        const transporter = nodemailer.createTransport({
           host: "smtp.gmail.com",
           port: 587,
           secure: false,
           auth: {
             user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS.replace(/\s/g, ''), // Remove any spaces
+            pass: process.env.EMAIL_PASS.replace(/\s/g, ""), // Remove any spaces
           },
           tls: {
-            rejectUnauthorized: false
-          }
+            rejectUnauthorized: false,
+          },
         });
 
         const mailOptions = {
@@ -41,9 +45,11 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
         await transporter.sendMail(mailOptions);
         console.log("✅ OTP email sent successfully to:", email);
         return { success: true, messageId: "gmail-" + Date.now() };
-
       } catch (emailError) {
-        console.error("❌ Gmail failed, falling back to console:", emailError.message);
+        console.error(
+          "❌ Gmail failed, falling back to console:",
+          emailError.message
+        );
         // Fall through to console logging
       }
     }
@@ -58,10 +64,12 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
     console.log("=".repeat(50));
 
     return { success: true, messageId: "fallback-" + Date.now() };
-
   } catch (error) {
     console.error("❌ Email service error:", error);
-    return { success: false, error: "Failed to send verification email. Please try again." };
+    return {
+      success: false,
+      error: "Failed to send verification email. Please try again.",
+    };
   }
 };
 
