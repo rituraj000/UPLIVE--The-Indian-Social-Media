@@ -10,7 +10,8 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
     if (
       process.env.NODE_ENV === "production" &&
       process.env.EMAIL_USER &&
-      process.env.EMAIL_PASS
+      process.env.EMAIL_PASS &&
+      process.env.ENABLE_REAL_EMAIL === "true" // Only try real email if explicitly enabled
     ) {
       try {
         const transporter = nodemailer.createTransport({
@@ -24,6 +25,8 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
           tls: {
             rejectUnauthorized: false,
           },
+          connectionTimeout: 10000, // 10 second connection timeout
+          socketTimeout: 15000, // 15 second socket timeout
         });
 
         const mailOptions = {
@@ -42,7 +45,14 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
           `,
         };
 
-        await transporter.sendMail(mailOptions);
+        // Send with timeout promise
+        await Promise.race([
+          transporter.sendMail(mailOptions),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Email timeout")), 20000)
+          ),
+        ]);
+
         console.log("✅ OTP email sent successfully to:", email);
         return { success: true, messageId: "gmail-" + Date.now() };
       } catch (emailError) {
@@ -54,9 +64,9 @@ const sendOTPEmail = async (email, otp, fullName = "User") => {
       }
     }
 
-    // Fallback: Log to console (for development or when email fails)
+    // Fallback: Log to console (primary mode for now)
     console.log("=".repeat(50));
-    console.log("📧 EMAIL OTP (Fallback Mode)");
+    console.log("📧 EMAIL OTP (Console Mode - Working)");
     console.log("=".repeat(50));
     console.log(`To: ${email}`);
     console.log(`Name: ${fullName}`);
