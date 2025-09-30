@@ -15,6 +15,11 @@ const postRoutes = require("./routes/post");
 const storyRoutes = require("./routes/story");
 const messageRoutes = require("./routes/message");
 const notificationRoutes = require("./routes/notification");
+const healthRoutes = require("./routes/health");
+
+// Import email services
+const emailService = require("./services/emailService");
+const emailQueue = require("./services/emailQueue");
 
 const app = express();
 const server = http.createServer(app);
@@ -163,6 +168,25 @@ app.get("/api/test-direct", (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+
+// Initialize email service
+async function initializeServices() {
+  try {
+    // Verify email service connection
+    const emailConnected = await emailService.verifyConnection();
+    if (emailConnected) {
+      console.log("✅ Email service initialized successfully");
+    } else {
+      console.log("⚠️  Email service not configured (optional)");
+    }
+    
+    console.log("✅ Email queue initialized");
+  } catch (error) {
+    console.error("❌ Failed to initialize services:", error.message);
+  }
+}
+
+server.listen(PORT, async () => {
+  console.log(`🚀 UPLIVE Server running on port ${PORT}`);
+  await initializeServices();
 });

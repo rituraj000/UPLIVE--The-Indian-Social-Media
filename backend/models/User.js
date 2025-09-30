@@ -49,6 +49,19 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Email verification fields
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+    registrationCompleted: {
+      type: Boolean,
+      default: false, // Only true after email verification
+    },
     followers: [
       {
         type: mongoose.Schema.Types.ObjectId,

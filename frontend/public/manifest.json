@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "UPLIVE",
+  "name": "UPLIVE - Made in India, for India",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,38 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#E4405F",
+  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "categories": ["social", "photo", "video"],
+  "description": "UPLIVE is a social media platform made in India, for India. Share photos, videos, and connect with friends.",
+  "screenshots": [
+    {
+      "src": "screenshot1.jpg",
+      "type": "image/jpeg",
+      "sizes": "540x720"
+    },
+    {
+      "src": "screenshot2.jpg",
+      "type": "image/jpeg",
+      "sizes": "540x720"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Home",
+      "url": "/",
+      "icons": [{ "src": "home-icon.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Create Post",
+      "url": "/create",
+      "icons": [{ "src": "create-icon.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Messages",
+      "url": "/messages",
+      "icons": [{ "src": "message-icon.png", "sizes": "96x96" }]
+    }
+  ]
 }

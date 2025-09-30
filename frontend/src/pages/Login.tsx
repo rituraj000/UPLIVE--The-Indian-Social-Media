@@ -55,8 +55,12 @@ const Login: React.FC = () => {
       if (success) {
         navigate('/');
       }
-    } catch (err) {
-      setError('Login failed. Please try again.');
+    } catch (err: any) {
+      if (err.message === 'EMAIL_VERIFICATION_REQUIRED') {
+        setError('Please verify your email before logging in. Check your inbox for the verification email.');
+      } else {
+        setError(err.message || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

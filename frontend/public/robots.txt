@@ -1,3 +1,12 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /messages/
+Disallow: /settings/
+Disallow: /create/
+Disallow: /login/
+Disallow: /register/
+Disallow: /verify-email/
+
+# Sitemap
+Sitemap: https://uplive-the-indian-social-media.onrender.com/sitemap.xml

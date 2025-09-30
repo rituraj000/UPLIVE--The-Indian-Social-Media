@@ -48,6 +48,7 @@ const Register: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
   
   // Username validation states
   const [usernameStatus, setUsernameStatus] = useState<{
@@ -139,9 +140,16 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      const success = await register(formData);
-      if (success) {
-        navigate('/welcome');
+      const result = await register(formData);
+      if (result.success) {
+        if (result.requiresVerification) {
+          // Show success message and stay on register page with instructions
+          setError(''); // Clear any previous errors
+          setEmailSent(true);
+        } else {
+          // Direct login (legacy flow)
+          navigate('/welcome');
+        }
       }
     } catch (err: any) {
       // Use the specific error message thrown from AuthContext
@@ -169,79 +177,120 @@ const Register: React.FC = () => {
               </Alert>
             )}
 
-            <Box component="form" onSubmit={handleSubmit}>
-              <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                margin="normal"
-                required
-                autoFocus
-              />
-              
-              <TextField
-                fullWidth
-                label="Full Name"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                margin="normal"
-                required
-              />
-              
-              <TextField
-                fullWidth
-                label="Username"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                margin="normal"
-                required
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      {usernameStatus.checking ? (
-                        <CircularProgress size={20} />
-                      ) : usernameStatus.available === true ? (
-                        <CheckIcon sx={{ color: 'success.main' }} />
-                      ) : usernameStatus.available === false ? (
-                        <CloseIcon sx={{ color: 'error.main' }} />
-                      ) : null}
-                    </InputAdornment>
-                  ),
-                }}
-                error={usernameStatus.available === false}
-                helperText={usernameStatus.message}
-              />
-              
-              <TextField
-                fullWidth
-                label="Password (min 6 characters)"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                margin="normal"
-                required
-              />
-              
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3, mb: 2 }}
-                disabled={loading || usernameStatus.checking || usernameStatus.available === false || !formData.password || formData.password.length < 6}
-              >
-                {loading ? 'Signing up...' : 'Sign up'}
-              </Button>
-            </Box>
+            {emailSent && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  🇮🇳 Account Created Successfully!
+                </Typography>
+                <Typography variant="body2">
+                  Please check your email and click the verification link to complete your registration.
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1, fontSize: '0.875rem', color: '#666' }}>
+                  Don't forget to check your spam folder if you don't see the email.
+                </Typography>
+              </Alert>
+            )}
 
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              By signing up, you agree to our Terms, Data Policy and Cookies Policy.
-            </Typography>
+            {!emailSent && (
+              <>
+                <Box component="form" onSubmit={handleSubmit}>
+                  <TextField
+                    fullWidth
+                    label="Email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    margin="normal"
+                    required
+                    autoFocus
+                  />
+                  
+                  <TextField
+                    fullWidth
+                    label="Full Name"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    margin="normal"
+                    required
+                  />
+                  
+                  <TextField
+                    fullWidth
+                    label="Username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    margin="normal"
+                    required
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          {usernameStatus.checking ? (
+                            <CircularProgress size={20} />
+                          ) : usernameStatus.available === true ? (
+                            <CheckIcon sx={{ color: 'success.main' }} />
+                          ) : usernameStatus.available === false ? (
+                            <CloseIcon sx={{ color: 'error.main' }} />
+                          ) : null}
+                        </InputAdornment>
+                      ),
+                    }}
+                    error={usernameStatus.available === false}
+                    helperText={usernameStatus.message}
+                  />
+                  
+                  <TextField
+                    fullWidth
+                    label="Password (min 6 characters)"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    margin="normal"
+                    required
+                  />
+                  
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    sx={{ mt: 3, mb: 2 }}
+                    disabled={loading || usernameStatus.checking || usernameStatus.available === false || !formData.password || formData.password.length < 6}
+                  >
+                    {loading ? 'Signing up...' : 'Sign up'}
+                  </Button>
+                </Box>
+
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  By signing up, you agree to our Terms, Data Policy and Cookies Policy.
+                </Typography>
+              </>
+            )}
+
+            {emailSent && (
+              <Box sx={{ textAlign: 'center', mt: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/login')}
+                  sx={{ mb: 2 }}
+                >
+                  Go to Login
+                </Button>
+                <Typography variant="body2" color="text.secondary">
+                  Didn't receive the email?{' '}
+                  <Link
+                    component="button"
+                    variant="body2"
+                    onClick={() => navigate('/verify-email')}
+                    sx={{ fontWeight: 'bold' }}
+                  >
+                    Resend verification email
+                  </Link>
+                </Typography>
+              </Box>
+            )}
           </CardContent>
         </RegisterCard>
 
