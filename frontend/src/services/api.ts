@@ -10,7 +10,11 @@ interface RequestConfigWithMetadata extends InternalAxiosRequestConfig {
   };
 }
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://uplive-the-indian-social-media.onrender.com/api';
+// In development, let the proxy in package.json handle the API URL
+// In production, use the environment variable or fallback URL
+const API_BASE_URL = process.env.NODE_ENV === 'development' 
+  ? '/api'  // This will be proxied to http://localhost:5000/api via the proxy setting
+  : (process.env.REACT_APP_API_URL || 'https://uplive-the-indian-social-media.onrender.com/api');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -141,6 +145,15 @@ export const authApi = {
     api.post<{ message: string }>('/auth/resend-verification', { email }),
   
   getCurrentUser: () => api.get<User>('/auth/me'),
+  
+  forgotPassword: (email: string) =>
+    api.post<{ message: string }>('/auth/forgot-password', { email }),
+  
+  resetPassword: (token: string, password: string) =>
+    api.post<AuthResponse>('/auth/reset-password', { token, password }),
+  
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post<{ message: string }>('/auth/change-password', { currentPassword, newPassword }),
 };
 
 // Users API

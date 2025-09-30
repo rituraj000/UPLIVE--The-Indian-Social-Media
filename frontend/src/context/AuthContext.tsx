@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithToken: (token: string, userData: User) => void;
   register: (userData: {
     username: string;
     email: string;
@@ -153,9 +154,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const loginWithToken = (token: string, userData: User) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+    toast.success('You have been logged in successfully');
+  };
+
   const value = {
     user,
     login,
+    loginWithToken,
     register,
     logout,
     loading,

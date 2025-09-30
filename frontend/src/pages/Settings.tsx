@@ -31,8 +31,10 @@ import {
   Lock as LockIcon,
   Public as PublicIcon,
   Info as InfoIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  Security as SecurityIcon
 } from '@mui/icons-material';
+import PasswordChange from '../components/PasswordChange';
 import { useAuth } from '../context/AuthContext';
 import { usersApi, notificationsApi } from '../services/api';
 import { User } from '../types';
@@ -275,8 +277,34 @@ const Settings: React.FC = () => {
         </Paper>
       )}
 
+      {/* Security Section - Password Change */}
+      <Paper sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        mb: { xs: 2, sm: 3 },
+        mx: { xs: 1, sm: 0 },
+        borderRadius: { xs: 0, sm: 1 },
+        boxShadow: { xs: 'none', sm: 1 },
+        border: { xs: '1px solid', sm: 'none' },
+        borderColor: 'divider'
+      }}>
+        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <SecurityIcon />
+          Security
+        </Typography>
+        
+        <PasswordChange onSuccess={() => toast.success('Password updated successfully')} />
+      </Paper>
+
       {/* About Section */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        mb: { xs: 2, sm: 3 },
+        mx: { xs: 1, sm: 0 },
+        borderRadius: { xs: 0, sm: 1 },
+        boxShadow: { xs: 'none', sm: 1 },
+        border: { xs: '1px solid', sm: 'none' },
+        borderColor: 'divider'
+      }}>
         <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
           <InfoIcon />
           About UPLIVE

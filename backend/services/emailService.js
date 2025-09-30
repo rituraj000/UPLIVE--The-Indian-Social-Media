@@ -393,6 +393,193 @@ Need help? Contact us at ${process.env.EMAIL_USER}
     `;
   }
 
+  async sendPasswordResetEmail({ email, token, username, correlationId }) {
+    if (!this.transporter) {
+      console.warn('Email service not initialized. Skipping password reset email.');
+      return;
+    }
+
+    try {
+      // Use environment-specific client URL
+      const clientUrl = process.env.CLIENT_URL || 
+                      (process.env.NODE_ENV === 'production' 
+                        ? 'https://uplive-the-indian-social-media-qlqj.vercel.app' 
+                        : 'http://localhost:3000');
+                        
+      const resetUrl = `${clientUrl}/reset-password?token=${token}`;
+      
+      const html = this.getPasswordResetEmailHTML(username, resetUrl);
+      const text = this.getPasswordResetEmailText(username, resetUrl);
+
+      const mailOptions = {
+        from: {
+          name: 'UPLIVE Security Team',
+          address: process.env.EMAIL_USER,
+        },
+        to: email,
+        subject: '🔒 UPLIVE Password Reset Request',
+        html,
+        text,
+        headers: {
+          'X-Correlation-ID': correlationId,
+          'X-Email-Type': 'password-reset',
+          'X-Priority': 'high'
+        },
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log('Password reset email sent successfully:', {
+        email,
+        username,
+        correlationId,
+        messageId: result.messageId,
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Failed to send password reset email:', {
+        email,
+        username,
+        correlationId,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  getPasswordResetEmailHTML(username, resetUrl) {
+    return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Reset Request - UPLIVE</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #f8f9fa;
+            }
+            .container {
+                background: white;
+                padding: 40px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            .logo {
+                font-size: 2.5rem;
+                font-weight: bold;
+                background: linear-gradient(45deg, #FF9933, #138808);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                margin-bottom: 10px;
+            }
+            .flag {
+                height: 4px;
+                background: linear-gradient(90deg, #FF9933 33.33%, #FFFFFF 33.33% 66.66%, #138808 66.66%);
+                border-radius: 2px;
+                margin: 20px 0;
+            }
+            .btn {
+                display: inline-block;
+                padding: 15px 30px;
+                background: linear-gradient(45deg, #FF9933, #138808);
+                color: white;
+                text-decoration: none;
+                border-radius: 50px;
+                font-weight: bold;
+                text-align: center;
+                margin: 20px 0;
+            }
+            .security-alert {
+                background: rgba(244, 67, 54, 0.1);
+                padding: 15px;
+                border-radius: 8px;
+                border-left: 4px solid #f44336;
+                margin: 20px 0;
+            }
+            .footer {
+                text-align: center;
+                margin-top: 30px;
+                font-size: 14px;
+                color: #666;
+            }
+            .timer {
+                font-weight: bold;
+                color: #f44336;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">UPLIVE</div>
+                <div class="flag"></div>
+                <h2>🔒 Password Reset Request</h2>
+            </div>
+
+            <p>Hello${username ? ` ${username}` : ''},</p>
+            
+            <p>We received a request to reset your password for your UPLIVE account. If you did not make this request, please ignore this email or contact our support team immediately.</p>
+
+            <div class="security-alert">
+                <strong>⚠️ Security Notice:</strong><br>
+                This password reset link will expire in <span class="timer">30 minutes</span>. For your security, please reset your password immediately.
+            </div>
+
+            <p>To reset your password, click the button below:</p>
+
+            <div style="text-align: center;">
+                <a href="${resetUrl}" class="btn">Reset My Password</a>
+            </div>
+
+            <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #666;">${resetUrl}</p>
+
+            <div class="footer">
+                <p>This email was sent because someone requested a password reset. If this was not you, you can safely ignore this email. Your password will remain unchanged.</p>
+                <p>Need help? Contact our security team at ${process.env.EMAIL_USER}</p>
+                <p>🇮🇳 UPLIVE - Securing India's Digital Connections</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+  }
+
+  getPasswordResetEmailText(username, resetUrl) {
+    return `
+🔒 UPLIVE Password Reset Request
+
+Hello${username ? ` ${username}` : ''},
+
+We received a request to reset your password for your UPLIVE account. If you did not make this request, please ignore this email or contact our support team immediately.
+
+⚠️ SECURITY NOTICE:
+This password reset link will expire in 30 MINUTES. For your security, please reset your password immediately.
+
+To reset your password, visit:
+${resetUrl}
+
+This email was sent because someone requested a password reset. If this was not you, you can safely ignore this email. Your password will remain unchanged.
+
+Need help? Contact our security team at ${process.env.EMAIL_USER}
+
+🇮🇳 UPLIVE - Securing India's Digital Connections
+    `;
+  }
+
   async verifyConnection() {
     if (!this.transporter) {
       return false;

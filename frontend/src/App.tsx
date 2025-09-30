@@ -14,19 +14,19 @@ import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy-loaded components
-import {
-  Login,
-  Register,
-  Welcome,
-  Home,
-  Profile,
-  Explore,
-  Messages,
-  CreatePost,
-  Feed,
-  Search,
-  Settings
-} from './utils/lazyComponents';
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Welcome = lazy(() => import('./pages/Welcome'));
+const Home = lazy(() => import('./pages/Home'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Explore = lazy(() => import('./pages/Explore'));
+const Messages = lazy(() => import('./pages/Messages'));
+const CreatePost = lazy(() => import('./pages/CreatePost'));
+const Feed = lazy(() => import('./pages/Feed'));
+const Search = lazy(() => import('./pages/Search'));
+const Settings = lazy(() => import('./pages/Settings'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 // Components
 const EmailVerification = lazy(() => import('./components/EmailVerification'));
@@ -96,8 +96,26 @@ function App() {
                 <Router>
                   <div className="App">
                     <Routes>
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
+                      <Route path="/login" element={
+                        <Suspense fallback={<Loading />}>
+                          <Login />
+                        </Suspense>
+                      } />
+                      <Route path="/register" element={
+                        <Suspense fallback={<Loading />}>
+                          <Register />
+                        </Suspense>
+                      } />
+                      <Route path="/forgot-password" element={
+                        <Suspense fallback={<Loading />}>
+                          <ForgotPassword />
+                        </Suspense>
+                      } />
+                      <Route path="/reset-password" element={
+                        <Suspense fallback={<Loading />}>
+                          <ResetPassword />
+                        </Suspense>
+                      } />
                       <Route path="/verify-email" element={
                         <Suspense fallback={<Loading />}>
                           <EmailVerification />

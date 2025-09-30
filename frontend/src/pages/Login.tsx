@@ -114,7 +114,12 @@ const Login: React.FC = () => {
 
             <Divider sx={{ my: 2 }}>OR</Divider>
 
-            <Link href="#" variant="body2" sx={{ display: 'block', mb: 2 }}>
+            <Link 
+              component="button"
+              variant="body2" 
+              sx={{ display: 'block', mb: 2 }}
+              onClick={() => navigate('/forgot-password')}
+            >
               Forgot password?
             </Link>
           </CardContent>

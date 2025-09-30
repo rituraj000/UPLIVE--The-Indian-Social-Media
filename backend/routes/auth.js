@@ -4,9 +4,11 @@ const jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 const rateLimit = require("express-rate-limit");
 const User = require("../models/User");
+const PasswordReset = require("../models/PasswordReset");
 const auth = require("../middleware/auth");
 const emailVerificationService = require("../services/emailVerificationService");
 const emailQueue = require("../services/emailQueue");
+const emailService = require("../services/emailService");
 const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
@@ -24,6 +26,14 @@ const resendLimiter = rateLimit({
   max: 5,
   keyGenerator: (req) => req.body.email || req.ip,
   message: { error: "Too many resend attempts, please wait before requesting again." },
+});
+
+// Rate limiter for password reset requests
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3,
+  keyGenerator: (req) => req.body.email || req.ip,
+  message: { error: "Too many password reset attempts, please try again later." },
 });
 
 // ------------------------------------------------------------------
@@ -492,5 +502,329 @@ router.get("/me", auth, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// ------------------------------------------------------------------
+// FORGOT PASSWORD Route
+// ------------------------------------------------------------------
+router.post(
+  "/forgot-password",
+  passwordResetLimiter,
+  [
+    body("email").isEmail().normalizeEmail().withMessage("Valid email is required"),
+  ],
+  async (req, res) => {
+    const correlationId = req.headers['x-correlation-id'] || uuidv4();
+    
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          message: "Invalid email format",
+          errors: errors.array(),
+        });
+      }
+
+      const { email } = req.body;
+      
+      console.log("Password reset request:", { email, correlationId });
+
+      // Find user by email
+      const user = await User.findOne({ 
+        email: new RegExp(`^${email}$`, "i") 
+      });
+      
+      // To prevent email enumeration, always return a success message
+      // But only send the email if the user exists and is verified
+      if (!user || !user.isEmailVerified) {
+        console.log("Password reset requested for non-existent or unverified user:", {
+          email,
+          correlationId,
+        });
+        
+        // Return 200 to prevent email enumeration attacks
+        return res.status(200).json({ 
+          message: "If your account exists and is verified, you will receive an email with password reset instructions." 
+        });
+      }
+
+      // Check if there's a recent reset token still valid
+      const existingToken = await PasswordReset.findOne({
+        user: user._id,
+        used: false,
+        expiresAt: { $gt: new Date() }
+      });
+
+      if (existingToken) {
+        // If there's a token less than 5 minutes old, don't create a new one
+        const tokenAgeMinutes = Math.round((Date.now() - existingToken.createdAt) / (1000 * 60));
+        
+        if (tokenAgeMinutes < 5) {
+          console.log("Reusing recent password reset token:", {
+            userId: user._id,
+            email,
+            tokenAge: `${tokenAgeMinutes} minutes`,
+            correlationId,
+          });
+          
+          // Send email with existing token
+          await emailService.sendPasswordResetEmail({
+            email: user.email,
+            token: existingToken.token,
+            username: user.username,
+            correlationId,
+          });
+          
+          return res.json({ 
+            message: "If your account exists and is verified, you will receive an email with password reset instructions." 
+          });
+        }
+
+        // If token exists but is older than 5 minutes, invalidate it
+        existingToken.used = true;
+        await existingToken.save();
+      }
+
+      // Generate token
+      const token = PasswordReset.generateToken();
+      
+      // Create reset token in DB
+      const passwordReset = new PasswordReset({
+        user: user._id,
+        token,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      await passwordReset.save();
+      
+      console.log("Password reset token created:", {
+        userId: user._id,
+        email,
+        correlationId,
+      });
+      
+      // Send email with reset instructions using queue
+      await emailQueue.add('send-password-reset-email', {
+        email: user.email,
+        token,
+        username: user.username,
+        correlationId,
+      });
+
+      res.json({ 
+        message: "If your account exists and is verified, you will receive an email with password reset instructions." 
+      });
+      
+    } catch (error) {
+      console.error("Forgot password error:", {
+        email: req.body.email,
+        correlationId,
+        error: error.message,
+      });
+      
+      // Still return success to prevent enumeration
+      res.status(200).json({ 
+        message: "If your account exists and is verified, you will receive an email with password reset instructions." 
+      });
+    }
+  }
+);
+
+// ------------------------------------------------------------------
+// RESET PASSWORD Route
+// ------------------------------------------------------------------
+router.post(
+  "/reset-password",
+  [
+    body("token").isLength({ min: 32 }).withMessage("Invalid token format"),
+    body("password")
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 8 characters."),
+  ],
+  async (req, res) => {
+    const correlationId = req.headers['x-correlation-id'] || uuidv4();
+    
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          message: "Validation failed",
+          errors: errors.array(),
+        });
+      }
+
+      const { token, password } = req.body;
+      
+      console.log("Password reset attempt:", { 
+        token: token.substring(0, 8) + '...',
+        correlationId 
+      });
+
+      // Find valid reset token
+      const passwordReset = await PasswordReset.findOne({
+        token,
+        used: false,
+        expiresAt: { $gt: new Date() }
+      });
+      
+      if (!passwordReset) {
+        return res.status(400).json({
+          message: "Invalid or expired password reset token",
+        });
+      }
+
+      // Mark token as used to prevent reuse
+      passwordReset.used = true;
+      await passwordReset.save();
+
+      // Find user
+      const user = await User.findById(passwordReset.user);
+      
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
+
+      // Update password
+      const salt = await bcrypt.genSalt(12);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      
+      user.password = hashedPassword;
+      user.passwordChangedAt = new Date();
+      await user.save();
+      
+      console.log("Password reset completed:", {
+        userId: user._id,
+        email: user.email,
+        correlationId,
+      });
+
+      // Create and return JWT
+      const jwtToken = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET || "fallback_secret",
+        { expiresIn: "7d" }
+      );
+
+      res.json({
+        message: "Your password has been reset successfully.",
+        token: jwtToken,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          fullName: user.fullName,
+          profilePicture: user.profilePicture,
+          isEmailVerified: user.isEmailVerified,
+        },
+      });
+      
+    } catch (error) {
+      console.error("Reset password error:", {
+        correlationId,
+        error: error.message,
+      });
+      
+      res.status(500).json({ 
+        message: "An error occurred while resetting your password. Please try again." 
+      });
+    }
+  }
+);
+
+// ------------------------------------------------------------------
+// Change Password Route (for logged-in users)
+// ------------------------------------------------------------------
+router.post(
+  "/change-password",
+  auth,
+  [
+    body("currentPassword")
+      .notEmpty()
+      .withMessage("Current password is required"),
+    body("newPassword")
+      .isLength({ min: 8 })
+      .withMessage("New password must be at least 8 characters"),
+  ],
+  async (req, res) => {
+    const correlationId = req.headers['x-correlation-id'] || uuidv4();
+    
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          message: "Validation failed",
+          errors: errors.array(),
+        });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user.userId;
+      
+      console.log("Password change attempt:", { 
+        userId,
+        correlationId 
+      });
+
+      // Find user
+      const user = await User.findById(userId);
+      
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
+
+      // Check current password
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      
+      if (!isMatch) {
+        return res.status(400).json({
+          message: "Current password is incorrect",
+        });
+      }
+
+      // Verify new password is different from current password
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      
+      if (isSamePassword) {
+        return res.status(400).json({
+          message: "New password must be different from current password",
+        });
+      }
+
+      // Update password
+      const salt = await bcrypt.genSalt(12);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      
+      user.password = hashedPassword;
+      user.passwordChangedAt = new Date();
+      await user.save();
+      
+      console.log("Password changed successfully:", {
+        userId: user._id,
+        email: user.email,
+        correlationId,
+      });
+
+      res.json({
+        message: "Your password has been changed successfully.",
+      });
+      
+    } catch (error) {
+      console.error("Change password error:", {
+        userId: req.user.userId,
+        correlationId,
+        error: error.message,
+      });
+      
+      res.status(500).json({ 
+        message: "An error occurred while changing your password. Please try again." 
+      });
+    }
+  }
+);
 
 module.exports = router;

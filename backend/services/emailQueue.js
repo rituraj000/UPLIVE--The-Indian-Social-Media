@@ -38,6 +38,7 @@ const emailWorker = new Worker('email', async (job) => {
   
   console.log('Processing email job:', { 
     jobName: name, 
+    type: name === 'send-password-reset-email' ? 'password-reset' : 'other',
     correlationId: data.correlationId 
   });
 
@@ -48,6 +49,9 @@ const emailWorker = new Worker('email', async (job) => {
         break;
       case 'send-welcome-email':
         await emailService.sendWelcomeEmail(data);
+        break;
+      case 'send-password-reset-email':
+        await emailService.sendPasswordResetEmail(data);
         break;
       default:
         throw new Error(`Unknown email job type: ${name}`);
