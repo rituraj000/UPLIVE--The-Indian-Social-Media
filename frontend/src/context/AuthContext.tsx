@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AuthResponse } from '../types';
+import { User } from '../types';
 import { authApi } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -11,7 +11,7 @@ interface AuthContextType {
     email: string;
     password: string;
     fullName: string;
-  }) => Promise<boolean>;
+  }) => Promise<{ success: boolean; requiresVerification?: boolean; message?: string }>;
   logout: () => void;
   loading: boolean;
   updateUser: (userData: Partial<User>) => void;
@@ -77,8 +77,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return true;
     } catch (error: any) {
       const message = error.response?.data?.message || 'Login failed';
+      
+      // Handle email verification requirement
+      if (error.response?.status === 403 && error.response?.data?.requiresVerification) {
+        toast.error('🇮🇳 Please verify your email first');
+        throw new Error('EMAIL_VERIFICATION_REQUIRED');
+      }
+      
       toast.error(message);
-      return false;
+      throw new Error(message);
     }
   };
 
@@ -87,21 +94,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     email: string;
     password: string;
     fullName: string;
-  }): Promise<boolean> => {
+  }): Promise<{ success: boolean; requiresVerification?: boolean; message?: string }> => {
     try {
       const response = await authApi.register(userData);
-      const { token, user: newUser } = response.data;
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      setUser(newUser);
+      // New email verification flow
+      if (response.data.requiresVerification) {
+        toast.success('🇮🇳 Account created! Please check your email to verify your account.');
+        return { 
+          success: true, 
+          requiresVerification: true,
+          message: response.data.message 
+        };
+      }
       
-      toast.success('Account created successfully!');
-      return true;
+      // Legacy flow (if somehow we get a token directly)
+      if ('token' in response.data && 'user' in response.data) {
+        localStorage.setItem('token', response.data.token as string);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        setUser(response.data.user as User);
+        toast.success('Account created successfully!');
+        return { success: true };
+      }
+      
+      return { success: false, message: 'Unexpected response format' };
     } catch (error: any) {
       const message = error.response?.data?.message || 'Registration failed';
       toast.error(message);
-      return false;
+      throw new Error(message);
     }
   };
 
