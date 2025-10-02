@@ -105,7 +105,7 @@ const Welcome: React.FC = () => {
           <Logo>UPLIVE</Logo>
           
           <PatrioticText>
-            This is a Social Media App created by <strong>Indian dev</strong> for the people of India.
+            This is a Social Media App created by <strong>Indian Dev</strong> for the people of India.
           </PatrioticText>
           
           <PatrioticText>
