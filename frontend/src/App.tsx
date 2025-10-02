@@ -27,6 +27,7 @@ const Search = lazy(() => import('./pages/Search'));
 const Settings = lazy(() => import('./pages/Settings'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const SuggestionsPage = lazy(() => import('./pages/SuggestionsPage'));
 
 // Components
 const EmailVerification = lazy(() => import('./components/EmailVerification'));
@@ -143,6 +144,7 @@ function App() {
                                 <Route path="/messages/:username" element={<Messages />} />
                                 <Route path="/create" element={<CreatePost />} />
                                 <Route path="/settings" element={<Settings />} />
+                                <Route path="/suggestions" element={<SuggestionsPage />} />
                                 <Route path="/profile" element={<Profile />} />
                                 <Route path="/:username" element={<Profile />} />
                               </Routes>

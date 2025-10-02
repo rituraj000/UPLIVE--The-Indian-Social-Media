@@ -1,6 +1,7 @@
 const express = require("express");
 const { body, validationResult } = require("express-validator");
 const rateLimit = require("express-rate-limit");
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const Post = require("../models/Post");
 const FollowRequest = require("../models/FollowRequest");
@@ -565,22 +566,102 @@ router.get("/search/:query", auth, async (req, res) => {
 // Get user suggestions
 router.get("/suggestions/for-you", auth, async (req, res) => {
   try {
-    const currentUser = await User.findById(req.user.userId);
+    const currentUserId = new mongoose.Types.ObjectId(req.user.userId);
+    const currentUser = await User.findById(currentUserId);
 
-    // Get users not followed by current user
-    const suggestions = await User.find({
-      _id: {
-        $ne: req.user.userId,
-        $nin: currentUser.following,
+    // Use aggregation pipeline to prioritize users with profile pictures
+    const suggestions = await User.aggregate([
+      {
+        $match: {
+          _id: {
+            $ne: currentUserId, // Ensure ObjectId comparison
+            $nin: currentUser.following,
+          },
+        },
       },
+      {
+        $addFields: {
+          hasProfilePicture: {
+            $cond: {
+              if: {
+                $and: [
+                  { $ne: ["$profilePicture", null] },
+                  { $ne: ["$profilePicture", ""] },
+                  {
+                    $ne: [
+                      "$profilePicture",
+                      "https://res.cloudinary.com/dvvzjj5fn/image/upload/v1729000000/uploads/default-avatar.png",
+                    ],
+                  },
+                ],
+              },
+              then: 1,
+              else: 0,
+            },
+          },
+        },
+      },
+      {
+        $sort: {
+          hasProfilePicture: -1, // Users with profile pictures first
+          followerCount: -1, // Then by follower count
+          createdAt: -1, // Then by newest
+        },
+      },
+      {
+        $project: {
+          username: 1,
+          fullName: 1,
+          profilePicture: 1,
+          isVerified: 1,
+          followerCount: 1,
+          hasProfilePicture: 1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
+
+    // Debug logging
+    console.log("Current user ID:", currentUserId);
+    console.log("Suggestions count:", suggestions.length);
+    console.log(
+      "Suggestions usernames:",
+      suggestions.map((s) => s.username)
+    );
+
+    // Double-check: filter out current user on the server side as backup
+    const filteredSuggestions = suggestions.filter(
+      (suggestion) => suggestion._id.toString() !== currentUserId.toString()
+    );
+
+    console.log("Filtered suggestions count:", filteredSuggestions.length);
+
+    res.json(filteredSuggestions);
+  } catch (error) {
+    console.error("Get suggestions error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get all users (for "See All" functionality)
+router.get("/discover/all", auth, async (req, res) => {
+  try {
+    console.log("Getting all users for user:", req.user.userId);
+
+    // Simple approach: get users excluding current user
+    const allUsers = await User.find({
+      _id: { $ne: req.user.userId },
     })
       .select("username fullName profilePicture isVerified followerCount")
       .sort({ followerCount: -1 })
-      .limit(10);
+      .limit(50); // Limit to prevent too much data
 
-    res.json(suggestions);
+    console.log("Found users:", allUsers.length);
+    res.json(allUsers);
   } catch (error) {
-    console.error("Get suggestions error:", error);
+    console.error("Get all users error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });

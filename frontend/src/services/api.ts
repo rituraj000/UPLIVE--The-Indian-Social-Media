@@ -196,6 +196,8 @@ export const usersApi = {
   searchUsers: (query: string) => api.get<User[]>(`/users/search/${query}`),
   
   getSuggestions: () => api.get<User[]>('/users/suggestions/for-you'),
+  
+  getAllUsers: () => api.get<User[]>('/users/discover/all'),
 
   getUserPosts: (userId: string) => api.get<Post[]>(`/posts/user/${userId}`),
   

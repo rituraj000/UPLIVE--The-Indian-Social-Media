@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const EmailVerification = require("../models/EmailVerification");
+const PendingRegistration = require("../models/PendingRegistration");
 const RateLimit = require("../models/RateLimit");
 const emailQueue = require("./emailQueue");
 
@@ -54,6 +55,7 @@ class EmailVerificationService {
             },
           }
         );
+        console.log("Email queued successfully");
       } catch (queueError) {
         // If queue fails (e.g., Redis not available), send email directly
         console.warn(
@@ -62,15 +64,20 @@ class EmailVerificationService {
         );
         const emailService = require("./emailService");
         try {
-          await emailService.sendVerificationEmail({
+          const emailResult = await emailService.sendVerificationEmail({
             email,
             token: verification.token,
             userId,
             correlationId: crypto.randomUUID(),
           });
+          console.log("Email sent directly successfully");
         } catch (emailError) {
-          console.warn("Direct email send also failed:", emailError.message);
-          // Continue anyway - user can still register without email
+          console.error("Direct email send failed:", emailError.message);
+          // Delete the verification record since email failed
+          await EmailVerification.findByIdAndDelete(verification._id);
+          throw new Error(
+            `Failed to send verification email: ${emailError.message}`
+          );
         }
       }
 
@@ -265,6 +272,157 @@ class EmailVerificationService {
         error: error.message,
       });
       return { hasPendingVerification: false, expiresAt: null };
+    }
+  }
+
+  /**
+   * Create pending registration with email verification
+   */
+  async createPendingRegistration(
+    userData,
+    ipAddress = null,
+    userAgent = null
+  ) {
+    const token = this.generateToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    try {
+      // Remove any existing pending registration for this email/username
+      await PendingRegistration.deleteMany({
+        $or: [{ email: userData.email }, { username: userData.username }],
+      });
+
+      // Create pending registration
+      const pendingRegistration = new PendingRegistration({
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        fullName: userData.fullName,
+        verificationToken: token,
+        tokenExpiresAt: expiresAt,
+        registrationData: {
+          ip: ipAddress,
+          userAgent,
+          timestamp: new Date(),
+        },
+      });
+
+      await pendingRegistration.save();
+
+      // Send verification email
+      await emailQueue.add(
+        "send-verification-email",
+        {
+          email: userData.email,
+          token,
+          userId: pendingRegistration._id.toString(),
+          correlationId: crypto.randomUUID(),
+        },
+        {
+          attempts: 3,
+          backoff: {
+            type: "exponential",
+            delay: 2000,
+          },
+          removeOnComplete: 10,
+          removeOnFail: 5,
+        }
+      );
+
+      console.log(
+        "Pending registration created and verification email queued:",
+        {
+          pendingId: pendingRegistration._id,
+          email: userData.email,
+          expiresAt,
+        }
+      );
+
+      return {
+        success: true,
+        pendingId: pendingRegistration._id,
+        expiresAt,
+      };
+    } catch (error) {
+      console.error("Failed to create pending registration:", {
+        email: userData.email,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Verify token and complete registration
+   */
+  async verifyPendingRegistration(token) {
+    try {
+      // Find pending registration by token
+      const pendingRegistration = await PendingRegistration.findOne({
+        verificationToken: token,
+        tokenExpiresAt: { $gt: new Date() },
+      });
+
+      if (!pendingRegistration) {
+        return {
+          success: false,
+          message: "Invalid or expired verification token",
+          code: "INVALID_TOKEN",
+        };
+      }
+
+      // Check if user already exists in main collection (edge case)
+      const User = require("../models/User");
+      const existingUser = await User.findOne({
+        $or: [
+          { email: pendingRegistration.email },
+          { username: pendingRegistration.username },
+        ],
+      });
+
+      if (existingUser) {
+        // Clean up pending registration
+        await PendingRegistration.findByIdAndDelete(pendingRegistration._id);
+        return {
+          success: false,
+          message: "User already exists",
+          code: "USER_EXISTS",
+        };
+      }
+
+      // Create the actual user
+      const newUser = new User({
+        username: pendingRegistration.username,
+        email: pendingRegistration.email,
+        password: pendingRegistration.password,
+        fullName: pendingRegistration.fullName,
+        isEmailVerified: true,
+        emailVerifiedAt: new Date(),
+        registrationCompleted: true,
+      });
+
+      await newUser.save();
+
+      // Clean up pending registration
+      await PendingRegistration.findByIdAndDelete(pendingRegistration._id);
+
+      console.log("Registration completed successfully:", {
+        userId: newUser._id,
+        email: newUser.email,
+        username: newUser.username,
+      });
+
+      return {
+        success: true,
+        user: newUser,
+        message: "Email verified and registration completed successfully",
+      };
+    } catch (error) {
+      console.error("Failed to verify pending registration:", {
+        token: token.substring(0, 8) + "...",
+        error: error.message,
+      });
+      throw error;
     }
   }
 }

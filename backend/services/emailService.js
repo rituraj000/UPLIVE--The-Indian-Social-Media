@@ -1,18 +1,36 @@
-const nodemailer = require('nodemailer');
-const fs = require('fs').promises;
-const path = require('path');
+const nodemailer = require("nodemailer");
+const fs = require("fs").promises;
+const path = require("path");
 
 class EmailService {
   constructor() {
     this.transporter = null;
-    this.initializeTransporter();
+    this.initialized = false;
+    this.initializationPromise = null;
+  }
+
+  async ensureInitialized() {
+    if (this.initialized) return;
+
+    if (!this.initializationPromise) {
+      this.initializationPromise = this.initializeTransporter();
+    }
+
+    await this.initializationPromise;
   }
 
   async initializeTransporter() {
     try {
+      // Check if credentials are provided
+      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        throw new Error(
+          "Email credentials not provided. EMAIL_USER and EMAIL_PASS environment variables are required."
+        );
+      }
+
       // Gmail configuration
       this.transporter = nodemailer.createTransport({
-        service: 'gmail',
+        service: "gmail",
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
@@ -20,52 +38,48 @@ class EmailService {
       });
 
       // Verify connection
-      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        await this.transporter.verify();
-        console.log('Email service initialized successfully');
-      } else {
-        console.warn('Email credentials not provided. Email service disabled.');
-      }
+      await this.transporter.verify();
+      console.log("Email service initialized successfully");
+      this.initialized = true;
     } catch (error) {
-      console.error('Failed to initialize email service:', error.message);
+      console.error("Failed to initialize email service:", error.message);
+      throw new Error(`Email service initialization failed: ${error.message}`);
     }
   }
 
   async sendVerificationEmail({ email, token, userId, correlationId }) {
-    if (!this.transporter) {
-      console.warn('Email service not initialized. Skipping email send.');
-      return;
-    }
+    await this.ensureInitialized();
 
     try {
       // Use environment-specific client URL
-      const clientUrl = process.env.CLIENT_URL || 
-                       (process.env.NODE_ENV === 'production' 
-                        ? 'https://uplive-the-indian-social-media-qlqj.vercel.app' 
-                        : 'http://localhost:3000');
-                        
+      const clientUrl =
+        process.env.CLIENT_URL ||
+        (process.env.NODE_ENV === "production"
+          ? "https://uplive-the-indian-social-media-qlqj.vercel.app"
+          : "http://localhost:3000");
+
       const verificationUrl = `${clientUrl}/verify-email?token=${token}`;
-      
+
       const html = this.getVerificationEmailHTML(verificationUrl);
       const text = this.getVerificationEmailText(verificationUrl);
 
       const mailOptions = {
         from: {
-          name: 'UPLIVE Team',
+          name: "UPLIVE Team",
           address: process.env.EMAIL_USER,
         },
         to: email,
-        subject: '🇮🇳 Verify your UPLIVE account - Made in India',
+        subject: "🇮🇳 Verify your UPLIVE account - Made in India",
         html,
         text,
         headers: {
-          'X-Correlation-ID': correlationId,
+          "X-Correlation-ID": correlationId,
         },
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      
-      console.log('Verification email sent successfully:', {
+
+      console.log("Verification email sent successfully:", {
         email,
         userId,
         correlationId,
@@ -74,7 +88,7 @@ class EmailService {
 
       return result;
     } catch (error) {
-      console.error('Failed to send verification email:', {
+      console.error("Failed to send verification email:", {
         email,
         userId,
         correlationId,
@@ -85,8 +99,13 @@ class EmailService {
   }
 
   async sendWelcomeEmail({ email, username, correlationId }) {
-    if (!this.transporter) {
-      console.warn('Email service not initialized. Skipping email send.');
+    try {
+      await this.ensureInitialized();
+    } catch (error) {
+      console.warn(
+        "Email service not initialized. Skipping welcome email send:",
+        error.message
+      );
       return;
     }
 
@@ -96,7 +115,7 @@ class EmailService {
 
       const mailOptions = {
         from: {
-          name: 'UPLIVE Team',
+          name: "UPLIVE Team",
           address: process.env.EMAIL_USER,
         },
         to: email,
@@ -104,13 +123,13 @@ class EmailService {
         html,
         text,
         headers: {
-          'X-Correlation-ID': correlationId,
+          "X-Correlation-ID": correlationId,
         },
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      
-      console.log('Welcome email sent successfully:', {
+
+      console.log("Welcome email sent successfully:", {
         email,
         username,
         correlationId,
@@ -119,7 +138,7 @@ class EmailService {
 
       return result;
     } catch (error) {
-      console.error('Failed to send welcome email:', {
+      console.error("Failed to send welcome email:", {
         email,
         username,
         correlationId,
@@ -331,7 +350,12 @@ Need help? Contact us at ${process.env.EMAIL_USER}
             <p>Your email has been verified successfully! Welcome to India's own social media platform.</p>
 
             <div style="text-align: center;">
-                <a href="${process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' ? 'https://uplive-the-indian-social-media-qlqj.vercel.app' : 'http://localhost:3000')}" class="btn">Start Exploring UPLIVE</a>
+                <a href="${
+                  process.env.CLIENT_URL ||
+                  (process.env.NODE_ENV === "production"
+                    ? "https://uplive-the-indian-social-media-qlqj.vercel.app"
+                    : "http://localhost:3000")
+                }" class="btn">Start Exploring UPLIVE</a>
             </div>
 
             <h3>What you can do on UPLIVE:</h3>
@@ -367,11 +391,12 @@ Need help? Contact us at ${process.env.EMAIL_USER}
   }
 
   getWelcomeEmailText(username) {
-    const clientUrl = process.env.CLIENT_URL || 
-                     (process.env.NODE_ENV === 'production' 
-                      ? 'https://uplive-the-indian-social-media-qlqj.vercel.app' 
-                      : 'http://localhost:3000');
-                      
+    const clientUrl =
+      process.env.CLIENT_URL ||
+      (process.env.NODE_ENV === "production"
+        ? "https://uplive-the-indian-social-media-qlqj.vercel.app"
+        : "http://localhost:3000");
+
     return `
 🇮🇳 Welcome to UPLIVE, ${username}!
 
@@ -394,42 +419,48 @@ Need help? Contact us at ${process.env.EMAIL_USER}
   }
 
   async sendPasswordResetEmail({ email, token, username, correlationId }) {
-    if (!this.transporter) {
-      console.warn('Email service not initialized. Skipping password reset email.');
+    try {
+      await this.ensureInitialized();
+    } catch (error) {
+      console.warn(
+        "Email service not initialized. Skipping password reset email:",
+        error.message
+      );
       return;
     }
 
     try {
       // Use environment-specific client URL
-      const clientUrl = process.env.CLIENT_URL || 
-                      (process.env.NODE_ENV === 'production' 
-                        ? 'https://uplive-the-indian-social-media-qlqj.vercel.app' 
-                        : 'http://localhost:3000');
-                        
+      const clientUrl =
+        process.env.CLIENT_URL ||
+        (process.env.NODE_ENV === "production"
+          ? "https://uplive-the-indian-social-media-qlqj.vercel.app"
+          : "http://localhost:3000");
+
       const resetUrl = `${clientUrl}/reset-password?token=${token}`;
-      
+
       const html = this.getPasswordResetEmailHTML(username, resetUrl);
       const text = this.getPasswordResetEmailText(username, resetUrl);
 
       const mailOptions = {
         from: {
-          name: 'UPLIVE Security Team',
+          name: "UPLIVE Security Team",
           address: process.env.EMAIL_USER,
         },
         to: email,
-        subject: '🔒 UPLIVE Password Reset Request',
+        subject: "🔒 UPLIVE Password Reset Request",
         html,
         text,
         headers: {
-          'X-Correlation-ID': correlationId,
-          'X-Email-Type': 'password-reset',
-          'X-Priority': 'high'
+          "X-Correlation-ID": correlationId,
+          "X-Email-Type": "password-reset",
+          "X-Priority": "high",
         },
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      
-      console.log('Password reset email sent successfully:', {
+
+      console.log("Password reset email sent successfully:", {
         email,
         username,
         correlationId,
@@ -438,7 +469,7 @@ Need help? Contact us at ${process.env.EMAIL_USER}
 
       return result;
     } catch (error) {
-      console.error('Failed to send password reset email:', {
+      console.error("Failed to send password reset email:", {
         email,
         username,
         correlationId,
@@ -529,7 +560,7 @@ Need help? Contact us at ${process.env.EMAIL_USER}
                 <h2>🔒 Password Reset Request</h2>
             </div>
 
-            <p>Hello${username ? ` ${username}` : ''},</p>
+            <p>Hello${username ? ` ${username}` : ""},</p>
             
             <p>We received a request to reset your password for your UPLIVE account. If you did not make this request, please ignore this email or contact our support team immediately.</p>
 
@@ -549,7 +580,9 @@ Need help? Contact us at ${process.env.EMAIL_USER}
 
             <div class="footer">
                 <p>This email was sent because someone requested a password reset. If this was not you, you can safely ignore this email. Your password will remain unchanged.</p>
-                <p>Need help? Contact our security team at ${process.env.EMAIL_USER}</p>
+                <p>Need help? Contact our security team at ${
+                  process.env.EMAIL_USER
+                }</p>
                 <p>🇮🇳 UPLIVE - Securing India's Digital Connections</p>
             </div>
         </div>
@@ -562,7 +595,7 @@ Need help? Contact us at ${process.env.EMAIL_USER}
     return `
 🔒 UPLIVE Password Reset Request
 
-Hello${username ? ` ${username}` : ''},
+Hello${username ? ` ${username}` : ""},
 
 We received a request to reset your password for your UPLIVE account. If you did not make this request, please ignore this email or contact our support team immediately.
 
@@ -587,10 +620,10 @@ Need help? Contact our security team at ${process.env.EMAIL_USER}
 
     try {
       await this.transporter.verify();
-      console.log('Email service connection verified');
+      console.log("Email service connection verified");
       return true;
     } catch (error) {
-      console.error('Email service connection failed:', error.message);
+      console.error("Email service connection failed:", error.message);
       return false;
     }
   }
