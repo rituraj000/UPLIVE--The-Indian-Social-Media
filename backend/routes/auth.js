@@ -4,7 +4,6 @@ const jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 const rateLimit = require("express-rate-limit");
 const User = require("../models/User");
-const PendingRegistration = require("../models/PendingRegistration");
 const PasswordReset = require("../models/PasswordReset");
 const auth = require("../middleware/auth");
 const emailVerificationService = require("../services/emailVerificationService");
@@ -131,7 +130,7 @@ router.post(
 
       const { username, email, password, fullName } = req.body;
 
-      // Check if user already exists and is verified
+      // Check if user exists
       const existingUser = await User.findOne({
         $or: [
           { email: new RegExp(`^${email}$`, "i") },
@@ -140,34 +139,43 @@ router.post(
       });
 
       if (existingUser) {
-        return res.status(400).json({
-          message: "A user with this email or username already exists.",
-        });
-      }
+        // If user exists but email not verified, allow re-registration
+        if (!existingUser.isEmailVerified) {
+          console.log("Re-registering unverified user:", {
+            userId: existingUser._id,
+            email,
+            correlationId,
+          });
 
-      // Check if there's already a pending registration
-      const existingPending = await PendingRegistration.findOne({
-        $or: [
-          { email: new RegExp(`^${email}$`, "i") },
-          { username: new RegExp(`^${username}$`, "i") },
-        ],
-      });
+          // Update existing user
+          const salt = await bcrypt.genSalt(12);
+          const hashedPassword = await bcrypt.hash(password, salt);
 
-      if (existingPending) {
-        // Check if token is still valid
-        if (existingPending.tokenExpiresAt > new Date()) {
-          return res.status(400).json({
-            message:
-              "A verification email has already been sent. Please check your inbox or wait for the current verification to expire.",
-            expiresAt: existingPending.tokenExpiresAt,
+          existingUser.password = hashedPassword;
+          existingUser.fullName = fullName;
+          existingUser.username = username;
+          await existingUser.save();
+
+          // Create new verification token
+          await emailVerificationService.createVerification(
+            existingUser._id.toString(),
+            email,
+            req.ip,
+            req.get("User-Agent")
+          );
+
+          return res.status(200).json({
+            message: "Verification email sent. Please check your inbox.",
+            requiresVerification: true,
           });
         } else {
-          // Remove expired pending registration
-          await PendingRegistration.findByIdAndDelete(existingPending._id);
+          return res.status(400).json({
+            message: "A user with this email or username already exists.",
+          });
         }
       }
 
-      // Hash password
+      // Create new user (BUT DON'T SAVE YET)
       const salt = await bcrypt.genSalt(12);
       const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -176,34 +184,58 @@ router.post(
         email,
         password: hashedPassword,
         fullName,
+        isEmailVerified: false,
+        registrationCompleted: false,
       };
 
-      console.log("Creating pending registration:", {
-        email,
-        username,
-        correlationId,
-      });
-
-      // Create pending registration and send verification email
+      // FIRST: Try to create email verification to ensure email service works
       try {
-        const result = await emailVerificationService.createPendingRegistration(
-          userData,
+        // Create a temporary user to get an ID for email verification
+        const tempUser = new User(userData);
+        const savedUser = await tempUser.save();
+
+        console.log("User created, attempting email verification:", {
+          userId: savedUser._id,
+          email,
+          correlationId,
+        });
+
+        // Create email verification - this will throw if email fails
+        const verification = await emailVerificationService.createVerification(
+          savedUser._id.toString(),
+          email,
           req.ip,
           req.get("User-Agent")
         );
 
+        // Verify that email was actually sent
+        if (!verification) {
+          // If verification creation failed, delete the user and throw error
+          await User.findByIdAndDelete(savedUser._id);
+          throw new Error("Failed to send verification email");
+        }
+
         res.status(201).json({
           message:
-            "Verification email sent! Please check your inbox to complete your registration.",
+            "Account created! Please check your email to verify your account.",
           requiresVerification: true,
-          expiresAt: result.expiresAt,
         });
       } catch (emailError) {
-        console.error("Failed to create pending registration:", {
+        console.error("Email verification failed during registration:", {
           email,
           correlationId,
           error: emailError.message,
         });
+
+        // Clean up: try to delete user if it was created
+        try {
+          await User.findOneAndDelete({ email: email });
+        } catch (cleanupError) {
+          console.error(
+            "Failed to cleanup user after email failure:",
+            cleanupError.message
+          );
+        }
 
         return res.status(500).json({
           message:
@@ -250,91 +282,90 @@ router.post(
         correlationId,
       });
 
-      // Try to verify pending registration first
-      const pendingResult =
-        await emailVerificationService.verifyPendingRegistration(token);
+      // Verify token
+      const verification = await emailVerificationService.verifyToken(token);
 
-      if (pendingResult.success) {
-        // Generate JWT token for the newly created user
-        const jwtToken = jwt.sign(
-          { userId: pendingResult.user._id },
-          process.env.JWT_SECRET || "fallback_secret",
-          { expiresIn: "30d" }
-        );
+      if (!verification.success) {
+        return res.status(400).json({
+          message: "Invalid or expired verification token",
+        });
+      }
 
-        // Return user data with token
-        const userResponse = {
-          _id: pendingResult.user._id,
-          username: pendingResult.user.username,
-          email: pendingResult.user.email,
-          fullName: pendingResult.user.fullName,
+      // Update user as verified
+      const user = await User.findByIdAndUpdate(
+        verification.userId,
+        {
           isEmailVerified: true,
-          emailVerifiedAt: pendingResult.user.emailVerifiedAt,
+          emailVerifiedAt: new Date(),
           registrationCompleted: true,
-        };
+        },
+        { new: true }
+      ).select("-password");
 
-        return res.status(200).json({
-          message: "Email verified successfully! Welcome to UPLIVE!",
-          token: jwtToken,
-          user: userResponse,
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
         });
       }
 
-      // If pending registration verification failed, try existing user verification
-      if (pendingResult.code === "INVALID_TOKEN") {
-        // Fallback to existing verification system for existing users
-        const verification = await emailVerificationService.verifyToken(token);
+      // Generate JWT token
+      const jwtToken = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET || "fallback_secret",
+        { expiresIn: "7d" }
+      );
 
-        if (!verification.success) {
-          return res.status(400).json({
-            message: "Invalid or expired verification token",
-          });
-        }
+      // Send welcome email
+      await emailQueue.add("send-welcome-email", {
+        email: user.email,
+        username: user.username,
+        correlationId,
+      });
 
-        // Update existing user as verified
-        const user = await User.findByIdAndUpdate(
-          verification.userId,
-          {
-            isEmailVerified: true,
-            emailVerifiedAt: new Date(),
-            registrationCompleted: true,
-          },
-          { new: true }
-        ).select("-password");
+      console.log("Email verification completed:", {
+        userId: user._id,
+        email: user.email,
+        correlationId,
+      });
 
-        if (!user) {
-          return res.status(404).json({
-            message: "User not found",
-          });
-        }
-
-        // Generate JWT token
-        const jwtToken = jwt.sign(
-          { userId: user._id },
-          process.env.JWT_SECRET || "fallback_secret",
-          { expiresIn: "30d" }
-        );
-
-        return res.status(200).json({
-          message: "Email verified successfully!",
-          token: jwtToken,
-          user,
-        });
-      }
-
-      // Handle other error cases
-      return res.status(400).json({
-        message: pendingResult.message || "Verification failed",
+      res.json({
+        message: "Email verified successfully! Welcome to UPLIVE!",
+        token: jwtToken,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          fullName: user.fullName,
+          profilePicture: user.profilePicture,
+          isEmailVerified: user.isEmailVerified,
+          hasSeenWelcome: user.hasSeenWelcome,
+        },
       });
     } catch (error) {
       console.error("Email verification error:", {
-        token: req.body.token?.substring(0, 8) + "...",
         correlationId,
         error: error.message,
       });
-      res.status(500).json({
-        message: "Internal server error during email verification",
-      });
+
+      let message = "Verification failed";
+      let statusCode = 400;
+
+      switch (error.message) {
+        case "INVALID_TOKEN":
+          message = "Invalid verification token";
+          break;
+        case "TOKEN_ALREADY_USED":
+          message = "This verification link has already been used";
+          break;
+        case "TOKEN_EXPIRED":
+          message = "Verification link has expired. Please request a new one.";
+          break;
+        default:
+          message = "Server error during verification";
+          statusCode = 500;
+      }
+
+      res.status(statusCode).json({ message });
     }
   }
 );
