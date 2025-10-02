@@ -1,14 +1,14 @@
-const crypto = require('crypto');
-const EmailVerification = require('../models/EmailVerification');
-const RateLimit = require('../models/RateLimit');
-const emailQueue = require('./emailQueue');
+const crypto = require("crypto");
+const EmailVerification = require("../models/EmailVerification");
+const RateLimit = require("../models/RateLimit");
+const emailQueue = require("./emailQueue");
 
 class EmailVerificationService {
   /**
    * Generate a cryptographically secure verification token
    */
   generateToken() {
-    return crypto.randomBytes(32).toString('hex');
+    return crypto.randomBytes(32).toString("hex");
   }
 
   /**
@@ -36,31 +36,59 @@ class EmailVerificationService {
 
       await verification.save();
 
-      // Queue email sending
-      await emailQueue.add('send-verification-email', {
-        email,
-        token: verification.token,
-        userId,
-        correlationId: crypto.randomUUID()
-      }, {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
-        },
-      });
+      try {
+        // Try to queue email sending
+        await emailQueue.add(
+          "send-verification-email",
+          {
+            email,
+            token: verification.token,
+            userId,
+            correlationId: crypto.randomUUID(),
+          },
+          {
+            attempts: 3,
+            backoff: {
+              type: "exponential",
+              delay: 2000,
+            },
+          }
+        );
+      } catch (queueError) {
+        // If queue fails (e.g., Redis not available), send email directly
+        console.warn(
+          "Email queue not available, sending email directly:",
+          queueError.message
+        );
+        const emailService = require("./emailService");
+        try {
+          await emailService.sendVerificationEmail({
+            email,
+            token: verification.token,
+            userId,
+            correlationId: crypto.randomUUID(),
+          });
+        } catch (emailError) {
+          console.warn("Direct email send also failed:", emailError.message);
+          // Continue anyway - user can still register without email
+        }
+      }
 
-      console.log('Email verification created:', {
+      console.log("Email verification created:", {
         userId,
         email,
         tokenId: verification._id,
-        expiresAt: verification.expiresAt
+        expiresAt: verification.expiresAt,
       });
 
       return verification;
     } catch (error) {
-      console.error('Failed to create email verification:', { userId, email, error: error.message });
-      throw new Error('Failed to create email verification');
+      console.error("Failed to create email verification:", {
+        userId,
+        email,
+        error: error.message,
+      });
+      throw new Error("Failed to create email verification");
     }
   }
 
@@ -70,18 +98,20 @@ class EmailVerificationService {
   async verifyToken(token) {
     try {
       // Find and validate token
-      const verification = await EmailVerification.findOne({ token }).populate('user');
-      
+      const verification = await EmailVerification.findOne({ token }).populate(
+        "user"
+      );
+
       if (!verification) {
-        throw new Error('INVALID_TOKEN');
+        throw new Error("INVALID_TOKEN");
       }
 
       if (verification.used) {
-        throw new Error('TOKEN_ALREADY_USED');
+        throw new Error("TOKEN_ALREADY_USED");
       }
 
       if (new Date() > verification.expiresAt) {
-        throw new Error('TOKEN_EXPIRED');
+        throw new Error("TOKEN_EXPIRED");
       }
 
       // Mark token as used (atomic operation)
@@ -92,26 +122,25 @@ class EmailVerificationService {
       );
 
       if (!updatedVerification) {
-        throw new Error('VERIFICATION_UPDATE_FAILED');
+        throw new Error("VERIFICATION_UPDATE_FAILED");
       }
 
-      console.log('Email verification successful:', {
+      console.log("Email verification successful:", {
         userId: verification.user._id,
-        tokenId: verification._id
+        tokenId: verification._id,
       });
 
       return {
         success: true,
         userId: verification.user._id,
-        user: verification.user
+        user: verification.user,
       };
-
     } catch (error) {
-      console.error('Email verification failed:', {
-        token: token.substring(0, 8) + '...',
-        error: error.message
+      console.error("Email verification failed:", {
+        token: token.substring(0, 8) + "...",
+        error: error.message,
       });
-      
+
       throw error;
     }
   }
@@ -128,8 +157,8 @@ class EmailVerificationService {
       // Check rate limit for email
       const emailLimit = await RateLimit.findOne({
         identifier: email,
-        action: 'email_verification_resend',
-        windowStart: { $gte: windowStart }
+        action: "email_verification_resend",
+        windowStart: { $gte: windowStart },
       });
 
       const emailCount = emailLimit ? emailLimit.count : 0;
@@ -139,15 +168,19 @@ class EmailVerificationService {
       if (ipAddress) {
         const ipLimit = await RateLimit.findOne({
           identifier: ipAddress,
-          action: 'email_verification_resend',
-          windowStart: { $gte: windowStart }
+          action: "email_verification_resend",
+          windowStart: { $gte: windowStart },
         });
         ipCount = ipLimit ? ipLimit.count : 0;
       }
 
       return emailCount < maxResends && ipCount < maxResends;
     } catch (error) {
-      console.error('Rate limit check failed:', { email, ipAddress, error: error.message });
+      console.error("Rate limit check failed:", {
+        email,
+        ipAddress,
+        error: error.message,
+      });
       return false;
     }
   }
@@ -159,10 +192,10 @@ class EmailVerificationService {
     try {
       // Record attempt for email
       await RateLimit.findOneAndUpdate(
-        { identifier: email, action: 'email_verification_resend' },
-        { 
+        { identifier: email, action: "email_verification_resend" },
+        {
           $inc: { count: 1 },
-          $setOnInsert: { windowStart: new Date() }
+          $setOnInsert: { windowStart: new Date() },
         },
         { upsert: true, new: true }
       );
@@ -170,16 +203,20 @@ class EmailVerificationService {
       // Record attempt for IP if provided
       if (ipAddress) {
         await RateLimit.findOneAndUpdate(
-          { identifier: ipAddress, action: 'email_verification_resend' },
-          { 
+          { identifier: ipAddress, action: "email_verification_resend" },
+          {
             $inc: { count: 1 },
-            $setOnInsert: { windowStart: new Date() }
+            $setOnInsert: { windowStart: new Date() },
           },
           { upsert: true, new: true }
         );
       }
     } catch (error) {
-      console.error('Failed to record resend attempt:', { email, ipAddress, error: error.message });
+      console.error("Failed to record resend attempt:", {
+        email,
+        ipAddress,
+        error: error.message,
+      });
     }
   }
 
@@ -189,18 +226,20 @@ class EmailVerificationService {
   async cleanupExpiredTokens() {
     try {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      
+
       const result = await EmailVerification.deleteMany({
-        expiresAt: { $lt: sevenDaysAgo }
+        expiresAt: { $lt: sevenDaysAgo },
       });
-      
-      console.log('Cleaned up expired verification tokens:', { 
-        deletedCount: result.deletedCount 
+
+      console.log("Cleaned up expired verification tokens:", {
+        deletedCount: result.deletedCount,
       });
-      
+
       return result.deletedCount;
     } catch (error) {
-      console.error('Failed to cleanup expired tokens:', { error: error.message });
+      console.error("Failed to cleanup expired tokens:", {
+        error: error.message,
+      });
       throw error;
     }
   }
@@ -213,15 +252,18 @@ class EmailVerificationService {
       const verification = await EmailVerification.findOne({
         user: userId,
         used: false,
-        expiresAt: { $gt: new Date() }
+        expiresAt: { $gt: new Date() },
       }).sort({ createdAt: -1 });
 
       return {
         hasPendingVerification: !!verification,
-        expiresAt: verification ? verification.expiresAt : null
+        expiresAt: verification ? verification.expiresAt : null,
       };
     } catch (error) {
-      console.error('Failed to get verification status:', { userId, error: error.message });
+      console.error("Failed to get verification status:", {
+        userId,
+        error: error.message,
+      });
       return { hasPendingVerification: false, expiresAt: null };
     }
   }
