@@ -61,7 +61,8 @@ class EmailVerificationService {
           "Email queue not available, sending email directly:",
           queueError.message
         );
-        const emailService = require("./emailService");
+        // Use SendGrid instead of SMTP (Render blocks SMTP ports)
+        const emailService = require("./sendGridEmailService");
         try {
           const emailResult = await emailService.sendVerificationEmail({
             email,
