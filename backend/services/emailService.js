@@ -65,8 +65,16 @@ class EmailService {
   }
 
   async sendVerificationEmail({ email, token, userId, correlationId }) {
+    console.log('📧 Starting email verification send:', {
+      email,
+      userId,
+      correlationId,
+      hasToken: !!token
+    });
+
     try {
       await this.ensureInitialized();
+      console.log('✅ Email service initialization confirmed');
     } catch (error) {
       console.error('❌ Email service initialization failed:', error.message);
       throw new Error('Email service not available. Please check server configuration.');
@@ -81,6 +89,7 @@ class EmailService {
           : "http://localhost:3000");
 
       const verificationUrl = `${clientUrl}/verify-email?token=${token}`;
+      console.log('🔗 Verification URL generated:', verificationUrl);
 
       const html = this.getVerificationEmailHTML(verificationUrl);
       const text = this.getVerificationEmailText(verificationUrl);
@@ -99,9 +108,16 @@ class EmailService {
         },
       };
 
+      console.log('📤 Attempting to send email with options:', {
+        to: email,
+        from: process.env.EMAIL_USER,
+        subject: mailOptions.subject,
+        correlationId
+      });
+
       const result = await this.transporter.sendMail(mailOptions);
 
-      console.log("Verification email sent successfully:", {
+      console.log("✅ Verification email sent successfully:", {
         email,
         userId,
         correlationId,
@@ -110,13 +126,23 @@ class EmailService {
 
       return result;
     } catch (error) {
-      console.error("Failed to send verification email:", {
+      console.error("❌ Failed to send verification email:", {
         email,
         userId,
         correlationId,
         error: error.message,
+        errorCode: error.code,
+        errorStack: error.stack
       });
-      throw error;
+      
+      // Provide specific error messages for common issues
+      if (error.code === 'EAUTH') {
+        throw new Error('Email authentication failed. Please check Gmail App Password.');
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        throw new Error('Email server connection failed. Network or firewall issue.');
+      } else {
+        throw new Error(`Email send failed: ${error.message}`);
+      }
     }
   }
 
