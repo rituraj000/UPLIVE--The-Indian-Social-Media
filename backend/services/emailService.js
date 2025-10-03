@@ -1,17 +1,5 @@
-const nodemailer = require("nodemailer");
-c      /    } catch (error) {
-      console.error('❌ Failed to initialize email service:', error.message);
-      console.error('🔍 Debug info:', {
-        emailUser: process.env.EMAIL_USER ? 'Set' : 'Not set',
-        emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set',
-        nodeEnv: process.env.NODE_ENV,
-        errorType: error.constructor.name
-      });
-      throw new Error(`Email service initialization failed: ${error.message}`);
-    }rify connection
-      await this.transporter.verify();
-      console.log('✅ Email service initialized successfully');
-      this.initialized = true; fs = require("fs").promises;
+﻿const nodemailer = require("nodemailer");
+const fs = require("fs").promises;
 const path = require("path");
 
 class EmailService {
@@ -33,11 +21,6 @@ class EmailService {
 
   async initializeTransporter() {
     try {
-      console.log('🔄 Initializing email service...');
-      console.log('📧 EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
-      console.log('🔑 EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set (length: ' + process.env.EMAIL_PASS.length + ')' : 'Not set');
-      console.log('🌍 NODE_ENV:', process.env.NODE_ENV);
-      
       // Check if credentials are provided
       if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         throw new Error(
@@ -65,20 +48,9 @@ class EmailService {
   }
 
   async sendVerificationEmail({ email, token, userId, correlationId }) {
-    console.log('📧 Starting email verification send:', {
-      email,
-      userId,
-      correlationId,
-      hasToken: !!token
-    });
-
-    try {
-      await this.ensureInitialized();
-      console.log('✅ Email service initialization confirmed');
-    } catch (error) {
-      console.error('❌ Email service initialization failed:', error.message);
-      throw new Error('Email service not available. Please check server configuration.');
-    }
+    console.log("📧 Starting email verification send for:", email);
+    await this.ensureInitialized();
+    console.log("✅ Email service initialization confirmed");
 
     try {
       // Use environment-specific client URL
@@ -89,7 +61,6 @@ class EmailService {
           : "http://localhost:3000");
 
       const verificationUrl = `${clientUrl}/verify-email?token=${token}`;
-      console.log('🔗 Verification URL generated:', verificationUrl);
 
       const html = this.getVerificationEmailHTML(verificationUrl);
       const text = this.getVerificationEmailText(verificationUrl);
@@ -100,20 +71,13 @@ class EmailService {
           address: process.env.EMAIL_USER,
         },
         to: email,
-        subject: "🇮🇳 Verify your UPLIVE account - Made in India",
+        subject: "≡ƒç«≡ƒç│ Verify your UPLIVE account - Made in India",
         html,
         text,
         headers: {
           "X-Correlation-ID": correlationId,
         },
       };
-
-      console.log('📤 Attempting to send email with options:', {
-        to: email,
-        from: process.env.EMAIL_USER,
-        subject: mailOptions.subject,
-        correlationId
-      });
 
       const result = await this.transporter.sendMail(mailOptions);
 
@@ -132,17 +96,8 @@ class EmailService {
         correlationId,
         error: error.message,
         errorCode: error.code,
-        errorStack: error.stack
       });
-      
-      // Provide specific error messages for common issues
-      if (error.code === 'EAUTH') {
-        throw new Error('Email authentication failed. Please check Gmail App Password.');
-      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-        throw new Error('Email server connection failed. Network or firewall issue.');
-      } else {
-        throw new Error(`Email send failed: ${error.message}`);
-      }
+      throw error;
     }
   }
 
@@ -167,7 +122,7 @@ class EmailService {
           address: process.env.EMAIL_USER,
         },
         to: email,
-        subject: `🇮🇳 Welcome to UPLIVE, ${username}! - India's Own Social Platform`,
+        subject: `≡ƒç«≡ƒç│ Welcome to UPLIVE, ${username}! - India's Own Social Platform`,
         html,
         text,
         headers: {
@@ -270,7 +225,7 @@ class EmailService {
             <div class="header">
                 <div class="logo">UPLIVE</div>
                 <div class="flag"></div>
-                <h2>🇮🇳 Verify Your Account</h2>
+                <h2>≡ƒç«≡ƒç│ Verify Your Account</h2>
             </div>
 
             <p>Welcome to UPLIVE - India's own social media platform!</p>
@@ -282,7 +237,7 @@ class EmailService {
             </div>
 
             <div class="india-pride">
-                <strong>🇮🇳 Made in India, for India</strong><br>
+                <strong>≡ƒç«≡ƒç│ Made in India, for India</strong><br>
                 Your data stays within our nation. Join the movement towards digital independence!
             </div>
 
@@ -294,7 +249,7 @@ class EmailService {
             <div class="footer">
                 <p>If you didn't create an account with UPLIVE, please ignore this email.</p>
                 <p>Need help? Contact us at ${process.env.EMAIL_USER}</p>
-                <p>🇮🇳 UPLIVE - Connecting India, Protecting India</p>
+                <p>≡ƒç«≡ƒç│ UPLIVE - Connecting India, Protecting India</p>
             </div>
         </div>
     </body>
@@ -304,7 +259,7 @@ class EmailService {
 
   getVerificationEmailText(verificationUrl) {
     return `
-🇮🇳 UPLIVE - Verify Your Account
+≡ƒç«≡ƒç│ UPLIVE - Verify Your Account
 
 Welcome to UPLIVE - India's own social media platform!
 
@@ -312,7 +267,7 @@ To complete your registration and start connecting with friends, please verify y
 
 ${verificationUrl}
 
-🇮🇳 Made in India, for India
+≡ƒç«≡ƒç│ Made in India, for India
 Your data stays within our nation. Join the movement towards digital independence!
 
 IMPORTANT: This verification link will expire in 24 hours for security reasons.
@@ -321,7 +276,7 @@ If you didn't create an account with UPLIVE, please ignore this email.
 
 Need help? Contact us at ${process.env.EMAIL_USER}
 
-🇮🇳 UPLIVE - Connecting India, Protecting India
+≡ƒç«≡ƒç│ UPLIVE - Connecting India, Protecting India
     `;
   }
 
@@ -392,7 +347,7 @@ Need help? Contact us at ${process.env.EMAIL_USER}
             <div class="header">
                 <div class="logo">UPLIVE</div>
                 <div class="flag"></div>
-                <h2>🇮🇳 Welcome to UPLIVE, ${username}!</h2>
+                <h2>≡ƒç«≡ƒç│ Welcome to UPLIVE, ${username}!</h2>
             </div>
 
             <p>Your email has been verified successfully! Welcome to India's own social media platform.</p>
@@ -409,28 +364,28 @@ Need help? Contact us at ${process.env.EMAIL_USER}
             <h3>What you can do on UPLIVE:</h3>
             
             <div class="feature">
-                📸 <strong>Share Your Moments:</strong> Post photos and videos with your friends
+                ≡ƒô╕ <strong>Share Your Moments:</strong> Post photos and videos with your friends
             </div>
             
             <div class="feature">
-                💬 <strong>Stay Connected:</strong> Message friends and family securely
+                ≡ƒÆ¼ <strong>Stay Connected:</strong> Message friends and family securely
             </div>
             
             <div class="feature">
-                📖 <strong>Stories:</strong> Share your daily life with 24-hour stories
+                ≡ƒôû <strong>Stories:</strong> Share your daily life with 24-hour stories
             </div>
             
             <div class="feature">
-                🇮🇳 <strong>Made in India:</strong> Your data stays secure within our nation
+                ≡ƒç«≡ƒç│ <strong>Made in India:</strong> Your data stays secure within our nation
             </div>
 
             <p style="text-align: center; margin-top: 30px;">
-                <strong>🇮🇳 Join the movement towards digital independence!</strong>
+                <strong>≡ƒç«≡ƒç│ Join the movement towards digital independence!</strong>
             </p>
 
             <div style="text-align: center; margin-top: 30px; font-size: 14px; color: #666;">
                 <p>Need help? Contact us at ${process.env.EMAIL_USER}</p>
-                <p>🇮🇳 UPLIVE - Connecting India, Protecting India</p>
+                <p>≡ƒç«≡ƒç│ UPLIVE - Connecting India, Protecting India</p>
             </div>
         </div>
     </body>
@@ -446,23 +401,23 @@ Need help? Contact us at ${process.env.EMAIL_USER}
         : "http://localhost:3000");
 
     return `
-🇮🇳 Welcome to UPLIVE, ${username}!
+≡ƒç«≡ƒç│ Welcome to UPLIVE, ${username}!
 
 Your email has been verified successfully! Welcome to India's own social media platform.
 
 What you can do on UPLIVE:
 
-📸 Share Your Moments: Post photos and videos with your friends
-💬 Stay Connected: Message friends and family securely  
-📖 Stories: Share your daily life with 24-hour stories
-🇮🇳 Made in India: Your data stays secure within our nation
+≡ƒô╕ Share Your Moments: Post photos and videos with your friends
+≡ƒÆ¼ Stay Connected: Message friends and family securely  
+≡ƒôû Stories: Share your daily life with 24-hour stories
+≡ƒç«≡ƒç│ Made in India: Your data stays secure within our nation
 
 Start exploring: ${clientUrl}
 
-🇮🇳 Join the movement towards digital independence!
+≡ƒç«≡ƒç│ Join the movement towards digital independence!
 
 Need help? Contact us at ${process.env.EMAIL_USER}
-🇮🇳 UPLIVE - Connecting India, Protecting India
+≡ƒç«≡ƒç│ UPLIVE - Connecting India, Protecting India
     `;
   }
 
@@ -496,7 +451,7 @@ Need help? Contact us at ${process.env.EMAIL_USER}
           address: process.env.EMAIL_USER,
         },
         to: email,
-        subject: "🔒 UPLIVE Password Reset Request",
+        subject: "≡ƒöÆ UPLIVE Password Reset Request",
         html,
         text,
         headers: {
@@ -605,7 +560,7 @@ Need help? Contact us at ${process.env.EMAIL_USER}
             <div class="header">
                 <div class="logo">UPLIVE</div>
                 <div class="flag"></div>
-                <h2>🔒 Password Reset Request</h2>
+                <h2>≡ƒöÆ Password Reset Request</h2>
             </div>
 
             <p>Hello${username ? ` ${username}` : ""},</p>
@@ -613,7 +568,7 @@ Need help? Contact us at ${process.env.EMAIL_USER}
             <p>We received a request to reset your password for your UPLIVE account. If you did not make this request, please ignore this email or contact our support team immediately.</p>
 
             <div class="security-alert">
-                <strong>⚠️ Security Notice:</strong><br>
+                <strong>ΓÜá∩╕Å Security Notice:</strong><br>
                 This password reset link will expire in <span class="timer">30 minutes</span>. For your security, please reset your password immediately.
             </div>
 
@@ -631,7 +586,7 @@ Need help? Contact us at ${process.env.EMAIL_USER}
                 <p>Need help? Contact our security team at ${
                   process.env.EMAIL_USER
                 }</p>
-                <p>🇮🇳 UPLIVE - Securing India's Digital Connections</p>
+                <p>≡ƒç«≡ƒç│ UPLIVE - Securing India's Digital Connections</p>
             </div>
         </div>
     </body>
@@ -641,13 +596,13 @@ Need help? Contact us at ${process.env.EMAIL_USER}
 
   getPasswordResetEmailText(username, resetUrl) {
     return `
-🔒 UPLIVE Password Reset Request
+≡ƒöÆ UPLIVE Password Reset Request
 
 Hello${username ? ` ${username}` : ""},
 
 We received a request to reset your password for your UPLIVE account. If you did not make this request, please ignore this email or contact our support team immediately.
 
-⚠️ SECURITY NOTICE:
+ΓÜá∩╕Å SECURITY NOTICE:
 This password reset link will expire in 30 MINUTES. For your security, please reset your password immediately.
 
 To reset your password, visit:
@@ -657,7 +612,7 @@ This email was sent because someone requested a password reset. If this was not 
 
 Need help? Contact our security team at ${process.env.EMAIL_USER}
 
-🇮🇳 UPLIVE - Securing India's Digital Connections
+≡ƒç«≡ƒç│ UPLIVE - Securing India's Digital Connections
     `;
   }
 
