@@ -221,7 +221,7 @@ class SendGridEmailService {
           <!-- Footer -->
           <div style="background: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
             <p style="color: #6b7280; font-size: 12px; margin: 0 0 10px 0;">
-              This verification link will expire in 24 hours for security.
+              This verification link will expire in 5 minutes for security.
             </p>
             <p style="color: #6b7280; font-size: 12px; margin: 0;">
               If you didn't create an UPLIVE account, please ignore this email.

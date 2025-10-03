@@ -19,7 +19,7 @@ const healthRoutes = require("./routes/health");
 const emailHealthRoutes = require("./routes/email-health");
 
 // Import email services
-const emailService = require("./services/emailService");
+const sendGridEmailService = require("./services/sendGridEmailService");
 const emailQueue = require("./services/emailQueue");
 
 const app = express();
@@ -175,10 +175,9 @@ const PORT = process.env.PORT || 5000;
 // Initialize email service
 async function initializeServices() {
   try {
-    // Verify email service connection
-    const emailConnected = await emailService.verifyConnection();
-    if (emailConnected) {
-      console.log("✅ Email service initialized successfully");
+    // Check if SendGrid is configured
+    if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_VERIFIED_SENDER) {
+      console.log("✅ SendGrid email service configured");
     } else {
       console.log("⚠️  Email service not configured (optional)");
     }
