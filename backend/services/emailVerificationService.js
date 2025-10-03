@@ -36,49 +36,24 @@ class EmailVerificationService {
 
       await verification.save();
 
+      // Use SendGrid directly instead of queue (Render blocks SMTP)
+      console.log("Sending verification email directly via SendGrid...");
+      const emailService = require("./sendGridEmailService");
       try {
-        // Try to queue email sending
-        await emailQueue.add(
-          "send-verification-email",
-          {
-            email,
-            token: verification.token,
-            userId,
-            correlationId: crypto.randomUUID(),
-          },
-          {
-            attempts: 3,
-            backoff: {
-              type: "exponential",
-              delay: 2000,
-            },
-          }
+        const emailResult = await emailService.sendVerificationEmail({
+          email,
+          token: verification.token,
+          userId,
+          correlationId: crypto.randomUUID(),
+        });
+        console.log("Verification email sent successfully via SendGrid");
+      } catch (emailError) {
+        console.error("SendGrid email send failed:", emailError.message);
+        // Delete the verification record since email failed
+        await EmailVerification.findByIdAndDelete(verification._id);
+        throw new Error(
+          `Failed to send verification email: ${emailError.message}`
         );
-        console.log("Email queued successfully");
-      } catch (queueError) {
-        // If queue fails (e.g., Redis not available), send email directly
-        console.warn(
-          "Email queue not available, sending email directly:",
-          queueError.message
-        );
-        // Use SendGrid instead of SMTP (Render blocks SMTP ports)
-        const emailService = require("./sendGridEmailService");
-        try {
-          const emailResult = await emailService.sendVerificationEmail({
-            email,
-            token: verification.token,
-            userId,
-            correlationId: crypto.randomUUID(),
-          });
-          console.log("Email sent directly successfully");
-        } catch (emailError) {
-          console.error("Direct email send failed:", emailError.message);
-          // Delete the verification record since email failed
-          await EmailVerification.findByIdAndDelete(verification._id);
-          throw new Error(
-            `Failed to send verification email: ${emailError.message}`
-          );
-        }
       }
 
       console.log("Email verification created:", {
