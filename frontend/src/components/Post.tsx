@@ -61,6 +61,7 @@ const Post: React.FC<PostProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([]);
   const heartIdRef = useRef(0);
+  const lastTapRef = useRef(0);
 
   // Intersection Observer for video autoplay
   useEffect(() => {
@@ -139,6 +140,43 @@ const Post: React.FC<PostProps> = ({
     // Only like the post if it's not already liked
     if (!isLiked && onLike) {
       onLike();
+    }
+  };
+
+  // Handle touch events for mobile double-tap
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!currentUser) return;
+
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300; // 300ms window for double tap
+
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // This is a double tap
+      e.preventDefault(); // Prevent zoom
+      
+      // Get the position of the touch relative to the media container
+      const rect = e.currentTarget.getBoundingClientRect();
+      const touch = e.changedTouches[0];
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+
+      // Add heart animation at touch position
+      const heartId = heartIdRef.current++;
+      setHearts(prev => [...prev, { id: heartId, x, y }]);
+
+      // Remove heart after animation
+      setTimeout(() => {
+        setHearts(prev => prev.filter(heart => heart.id !== heartId));
+      }, 1000);
+
+      // Only like the post if it's not already liked
+      if (!isLiked && onLike) {
+        onLike();
+      }
+      
+      lastTapRef.current = 0; // Reset
+    } else {
+      lastTapRef.current = now;
     }
   };
 
@@ -231,6 +269,7 @@ const Post: React.FC<PostProps> = ({
               alt={post.caption || 'Post image'}
               className={styles.postImage}
               onDoubleClick={handleDoubleClick}
+              onTouchEnd={handleTouchEnd}
               loading="lazy"
             />
           ) : (
@@ -243,6 +282,7 @@ const Post: React.FC<PostProps> = ({
                 loop
                 playsInline
                 onDoubleClick={handleDoubleClick}
+                onTouchEnd={handleTouchEnd}
                 style={{
                   width: '100%',
                   height: '100%',

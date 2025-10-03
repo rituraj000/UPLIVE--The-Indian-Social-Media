@@ -270,6 +270,11 @@
   display: block;
   cursor: pointer;
   background-color: #f5f5f5;
+  /* Improve touch responsiveness on mobile */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .postVideo {
@@ -281,6 +286,11 @@
   object-fit: cover;
   display: block;
   cursor: pointer;
+  /* Improve touch responsiveness on mobile */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* Video Container for Instagram-style autoplay */
