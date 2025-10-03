@@ -28,6 +28,8 @@ const Settings = lazy(() => import('./pages/Settings'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const SuggestionsPage = lazy(() => import('./pages/SuggestionsPage'));
+const PostDemo = lazy(() => import('./pages/PostDemo'));
+const SavedPosts = lazy(() => import('./pages/SavedPosts'));
 
 // Components
 const EmailVerification = lazy(() => import('./components/EmailVerification'));
@@ -47,7 +49,7 @@ const theme = createTheme({
       main: '#E4405F',
     },
     background: {
-      default: '#fafafa',
+      default: '#FCFAF7', // Pale cream background
     },
   },
   typography: {
@@ -145,6 +147,8 @@ function App() {
                                 <Route path="/create" element={<CreatePost />} />
                                 <Route path="/settings" element={<Settings />} />
                                 <Route path="/suggestions" element={<SuggestionsPage />} />
+                                <Route path="/post-demo" element={<PostDemo />} />
+                                <Route path="/saved-posts" element={<SavedPosts />} />
                                 <Route path="/profile" element={<Profile />} />
                                 <Route path="/:username" element={<Profile />} />
                               </Routes>

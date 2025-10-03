@@ -2,28 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  Card,
-  CardContent,
-  CardMedia,
-  Typography,
-  Avatar,
-  IconButton,
-  Button,
   CircularProgress,
-  Chip
+  Typography,
 } from '@mui/material';
-import {
-  Favorite as FavoriteIcon,
-  FavoriteBorder as FavoriteBorderIcon,
-  ChatBubbleOutline as CommentIcon,
-  Share as ShareIcon,
-  PersonAdd as PersonAddIcon,
-  PersonRemove as PersonRemoveIcon,
-  MonetizationOn as SupportIcon
-} from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { postsApi, usersApi, followApi } from '../services/api';
-import { Post, User } from '../types';
+import { Post as PostType, User } from '../types';
+import Post from './Post';
 import CommentModal from './CommentModal';
 import ShareModal from './ShareModal';
 import toast from 'react-hot-toast';
@@ -31,13 +16,15 @@ import toast from 'react-hot-toast';
 const PostFeed: React.FC = () => {
   const { user: currentUser, refreshUser } = useAuth();
   const navigate = useNavigate();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [followLoading, setFollowLoading] = useState<Set<string>>(new Set());
   const [commentModalOpen, setCommentModalOpen] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedPost, setSelectedPost] = useState<PostType | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set());
 
   // Fetch all posts from all users
   const fetchAllPosts = useCallback(async () => {
@@ -61,8 +48,32 @@ const PostFeed: React.FC = () => {
       
       setPosts(response.data);
       
-      // Get current user's following list
+      // Set liked and saved posts from current user data
       if (currentUser) {
+        const userLikedPosts = new Set<string>();
+        const userSavedPosts = new Set<string>();
+        
+        response.data.forEach((post: PostType) => {
+          if (post.likes.some((user: User) => user.id === currentUser.id)) {
+            userLikedPosts.add(post.id);
+          }
+        });
+        
+        // Handle savedPosts - they could be ObjectIds (strings) or Post objects
+        if (currentUser.savedPosts && Array.isArray(currentUser.savedPosts)) {
+          currentUser.savedPosts.forEach((savedPost: any) => {
+            // If it's a Post object, use its id; if it's just an ObjectId string, use it directly
+            const postId = typeof savedPost === 'string' ? savedPost : savedPost.id || savedPost._id;
+            if (postId) {
+              userSavedPosts.add(postId);
+            }
+          });
+        }
+        
+        setLikedPosts(userLikedPosts);
+        setSavedPosts(userSavedPosts);
+        
+        // Get current user's following list
         console.log('🔍 Getting user following list for:', currentUser.username);
         const userResponse = await usersApi.getProfile(currentUser.username);
         console.log('👥 Following data:', userResponse.data.following);
@@ -89,73 +100,36 @@ const PostFeed: React.FC = () => {
     fetchAllPosts();
   }, [fetchAllPosts]);
 
-  // Handle follow/unfollow
-  const handleFollowToggle = async (userId: string) => {
-    if (!currentUser || followLoading.has(userId)) return;
-    
-    console.log('🔍 PostFeed Follow toggle:', { userId, currentUserId: currentUser.id, isCurrentlyFollowing: followingUsers.has(userId) });
-
-    setFollowLoading(prev => new Set(prev).add(userId));
-
-    try {
-      const isFollowing = followingUsers.has(userId);
-      
-      if (isFollowing) {
-        console.log('📤 PostFeed Unfollowing user...');
-        const response = await followApi.unfollowUser(userId);
-        console.log('✅ PostFeed Unfollow response:', response.data);
-        
-        setFollowingUsers(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(userId);
-          return newSet;
-        });
-        toast.success('Unfollowed successfully');
-        
-        // Refresh user data to update follower/following counts
-        await refreshUser();
-      } else {
-        console.log('📤 PostFeed Following user...');
-        const response = await followApi.followUser(userId);
-        console.log('✅ PostFeed Follow response:', response.data);
-        
-        setFollowingUsers(prev => new Set(prev).add(userId));
-        toast.success('Following now!');
-        
-        // Refresh user data to update follower/following counts
-        await refreshUser();
-      }
-    } catch (error: any) {
-      console.error('❌ PostFeed Follow error:', error);
-      console.error('❌ PostFeed Follow error details:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      });
-      toast.error('Failed to update follow status');
-    } finally {
-      setFollowLoading(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(userId);
-        return newSet;
-      });
-    }
-  };
-
   // Handle like/unlike post
   const handleLike = async (postId: string) => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      toast.error('Please login to like posts');
+      return;
+    }
 
     try {
       await postsApi.likePost(postId);
+      
+      // Update local state
+      setLikedPosts(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(postId)) {
+          newSet.delete(postId);
+        } else {
+          newSet.add(postId);
+        }
+        return newSet;
+      });
+      
+      // Update posts state
       setPosts(prevPosts =>
         prevPosts.map(post => {
           if (post.id === postId) {
-            const isLiked = post.likes.some(user => user.id === currentUser.id);
+            const isLiked = post.likes.some((user: User) => user.id === currentUser.id);
             return {
               ...post,
               likes: isLiked
-                ? post.likes.filter(user => user.id !== currentUser.id)
+                ? post.likes.filter((user: User) => user.id !== currentUser.id)
                 : [...post.likes, currentUser],
               likeCount: isLiked ? post.likeCount - 1 : post.likeCount + 1,
             };
@@ -183,29 +157,6 @@ const PostFeed: React.FC = () => {
     }
   };
 
-  // Handle comment added - update post comment count
-  const handleCommentAdded = (postId: string) => {
-    setPosts(prevPosts =>
-      prevPosts.map(post => 
-        post.id === postId 
-          ? { ...post, commentCount: (post.commentCount || 0) + 1 }
-          : post
-      )
-    );
-  };
-
-  // Handle support click - show support modal or payment options
-  const handleSupportClick = (postId: string, username: string) => {
-    if (!currentUser) {
-      toast.error('Please login to support creators');
-      return;
-    }
-    
-    // For now, show a coming soon message
-    toast.success(`Support feature coming soon! Support ${username} 💰`);
-    console.log('Support clicked for post:', postId, 'by user:', username);
-  };
-
   // Handle share click - open share modal
   const handleShareClick = (postId: string) => {
     if (!currentUser) {
@@ -220,220 +171,175 @@ const PostFeed: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // Handle support click
+  const handleSupportClick = (postId: string) => {
+    if (!currentUser) {
+      toast.error('Please login to support creators');
+      return;
+    }
     
-    if (diffDays === 1) return 'Today';
-    if (diffDays === 2) return 'Yesterday';
-    if (diffDays <= 7) return `${diffDays} days ago`;
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      toast.success(`Support feature coming soon! Support ${post.user.username} 💰`);
+      console.log('Support clicked for post:', postId, 'by user:', post.user.username);
+    }
+  };
+
+  // Handle save/unsave post
+  const handleSaveClick = async (postId: string) => {
+    if (!currentUser) {
+      toast.error('Please login to save posts');
+      return;
+    }
+
+    try {
+      const isSaved = savedPosts.has(postId);
+      
+      if (isSaved) {
+        // Unsave post
+        await postsApi.unsavePost(postId);
+        setSavedPosts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(postId);
+          return newSet;
+        });
+        toast.success('Post removed from saved');
+      } else {
+        // Save post
+        await postsApi.savePost(postId);
+        setSavedPosts(prev => new Set(prev).add(postId));
+        toast.success('Post saved');
+      }
+      
+      // Refresh user data to keep savedPosts in sync
+      await refreshUser();
+    } catch (error: any) {
+      console.error('Save error:', error);
+      if (error.response?.status === 400) {
+        // Handle already saved/not saved errors
+        const message = error.response.data.message;
+        if (message.includes('already saved')) {
+          toast.error('Post is already saved');
+        } else if (message.includes('not saved')) {
+          toast.error('Post is not in your saved collection');
+        } else {
+          toast.error(message);
+        }
+      } else {
+        toast.error('Failed to save post');
+      }
+    }
+  };
+
+  // Handle follow/unfollow user
+  const handleFollow = async (userId: string) => {
+    if (!currentUser || followLoading.has(userId)) return;
     
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-    });
+    console.log('🔍 PostFeed Follow user:', { userId, currentUserId: currentUser.id });
+
+    setFollowLoading(prev => new Set(prev).add(userId));
+
+    try {
+      console.log('📤 PostFeed Following user...');
+      const response = await followApi.followUser(userId);
+      console.log('✅ PostFeed Follow response:', response.data);
+      
+      setFollowingUsers(prev => new Set(prev).add(userId));
+      toast.success('Now following!');
+      
+      // Refresh user data to update follower/following counts
+      await refreshUser();
+    } catch (error: any) {
+      console.error('❌ PostFeed Follow error:', error);
+      console.error('❌ PostFeed Follow error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      toast.error('Failed to follow user');
+    } finally {
+      setFollowLoading(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+    }
+  };
+
+  // Handle comment added - update post comment count
+  const handleCommentAdded = (postId: string) => {
+    setPosts(prevPosts =>
+      prevPosts.map(post => 
+        post.id === postId 
+          ? { ...post, commentCount: (post.commentCount || 0) + 1 }
+          : post
+      )
+    );
   };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        minHeight: '200px',
+        mt: 4 
+      }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto', mt: 2 }}>
+    <Box sx={{ 
+      width: '100%',
+      maxWidth: { xs: '100vw', sm: 470 }, // Reduced from 614 to match post width
+      mx: 'auto', 
+      mt: { xs: 0, sm: 2 },
+      px: 0,
+      overflow: 'hidden'
+    }}>
       {posts.length === 0 ? (
-        <Card>
-          <CardContent sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="h6" color="text.secondary">
-              No posts available
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Be the first to create a post!
-            </Typography>
-          </CardContent>
-        </Card>
+        <Box sx={{
+          textAlign: 'center',
+          py: 8,
+          px: 4,
+          backgroundColor: '#ffffff',
+          borderRadius: { xs: 0, sm: 2 },
+          border: { xs: 'none', sm: '1px solid #e0e0e0' },
+          mx: { xs: 0, sm: 1 }
+        }}>
+          <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+            No posts available
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Be the first to create a post!
+          </Typography>
+        </Box>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          width: '100%',
+          gap: { xs: 0, sm: 1 }
+        }}>
           {posts.map((post) => (
-            <Card key={post.id} sx={{ 
-              mb: 2,
-              mx: { xs: 0, sm: 0, md: 0 },
-              borderRadius: { xs: 0, sm: 2 },
-              boxShadow: { xs: 'none', sm: 1 },
-              border: { xs: 'none', sm: '1px solid #e0e0e0' }
-            }}>
-                {/* Post Header */}
-                <CardContent sx={{ 
-                  pb: 1,
-                  px: { xs: 2, sm: 3 },
-                  py: { xs: 1.5, sm: 2 }
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar
-                        src={post.user.profilePicture}
-                        alt={post.user.username}
-                        sx={{ 
-                          width: 40, 
-                          height: 40,
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => navigate(`/${post.user.username}`)}
-                      />
-                      <Box>
-                        <Typography 
-                          variant="subtitle2" 
-                          fontWeight="bold"
-                          sx={{ 
-                            cursor: 'pointer',
-                            '&:hover': { textDecoration: 'underline' }
-                          }}
-                          onClick={() => navigate(`/${post.user.username}`)}
-                        >
-                          {post.user.username}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDate(post.createdAt)}
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    {/* Follow Button */}
-                    {currentUser && currentUser.id !== post.user.id && (
-                      <Button
-                        variant={followingUsers.has(post.user.id) ? "outlined" : "contained"}
-                        color="primary"
-                        size="small"
-                        startIcon={
-                          followingUsers.has(post.user.id) ? <PersonRemoveIcon /> : <PersonAddIcon />
-                        }
-                        onClick={() => handleFollowToggle(post.user.id)}
-                        disabled={followLoading.has(post.user.id)}
-                        sx={{ minWidth: 100 }}
-                      >
-                        {followLoading.has(post.user.id) ? (
-                          <CircularProgress size={16} />
-                        ) : followingUsers.has(post.user.id) ? (
-                          'Following'
-                        ) : (
-                          'Follow'
-                        )}
-                      </Button>
-                    )}
-                  </Box>
-                </CardContent>
-
-                {/* Post Media */}
-                {post.media && post.media.length > 0 && (
-                  <CardMedia
-                    component={post.media[0].type === 'video' ? 'video' : 'img'}
-                    image={post.media[0].url}
-                    src={post.media[0].type === 'video' ? post.media[0].url : undefined}
-                    controls={post.media[0].type === 'video'}
-                    sx={{
-                      height: 400,
-                      objectFit: 'cover',
-                    }}
-                  />
-                )}
-
-                {/* Post Actions */}
-                <CardContent sx={{ pt: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <IconButton
-                      onClick={() => handleLike(post.id)}
-                      color="primary"
-                      disabled={!currentUser}
-                    >
-                      {currentUser && post.likes.some(user => user.id === currentUser.id) ? (
-                        <FavoriteIcon />
-                      ) : (
-                        <FavoriteBorderIcon />
-                      )}
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleCommentClick(post.id)}
-                      disabled={!currentUser}
-                    >
-                      <CommentIcon />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleShareClick(post.id)}
-                      disabled={!currentUser}
-                    >
-                      <ShareIcon />
-                    </IconButton>
-                    <IconButton 
-                      onClick={() => handleSupportClick(post.id, post.user.username)}
-                      disabled={!currentUser}
-                      color="warning"
-                    >
-                      <SupportIcon />
-                    </IconButton>
-                  </Box>
-
-                  {/* Like Count */}
-                  <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>
-                    {post.likeCount} {post.likeCount === 1 ? 'like' : 'likes'}
-                  </Typography>
-
-                  {/* Comment Count */}
-                  {post.commentCount > 0 && (
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary" 
-                      sx={{ 
-                        mb: 1,
-                        cursor: 'pointer',
-                        '&:hover': { textDecoration: 'underline' }
-                      }}
-                      onClick={() => handleCommentClick(post.id)}
-                    >
-                      View all {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}
-                    </Typography>
-                  )}
-
-                  {/* Caption */}
-                  {post.caption && (
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <Typography 
-                        component="span" 
-                        fontWeight="bold"
-                        sx={{ 
-                          cursor: 'pointer',
-                          '&:hover': { textDecoration: 'underline' }
-                        }}
-                        onClick={() => navigate(`/${post.user.username}`)}
-                      >
-                        {post.user.username}
-                      </Typography>{' '}
-                      {post.caption}
-                    </Typography>
-                  )}
-
-                  {/* Hashtags */}
-                  {post.hashtags && post.hashtags.length > 0 && (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                      {post.hashtags.map((hashtag, index) => (
-                        <Chip
-                          key={index}
-                          label={`#${hashtag}`}
-                          size="small"
-                          variant="outlined"
-                          sx={{ fontSize: '0.75rem' }}
-                        />
-                      ))}
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+            <Post
+              key={post.id}
+              post={post}
+              isLiked={likedPosts.has(post.id)}
+              isSaved={savedPosts.has(post.id)}
+              isFollowing={followingUsers.has(post.user.id)}
+              followLoading={followLoading.has(post.user.id)}
+              onLike={() => handleLike(post.id)}
+              onComment={() => handleCommentClick(post.id)}
+              onShare={() => handleShareClick(post.id)}
+              onSave={() => handleSaveClick(post.id)}
+              onSupport={() => handleSupportClick(post.id)}
+              onFollow={handleFollow}
+            />
+          ))}
         </Box>
       )}
       

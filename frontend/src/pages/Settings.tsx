@@ -32,7 +32,8 @@ import {
   Public as PublicIcon,
   Info as InfoIcon,
   Logout as LogoutIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  BookmarkBorder as BookmarkBorderIcon
 } from '@mui/icons-material';
 import PasswordChange from '../components/PasswordChange';
 import { useAuth } from '../context/AuthContext';
@@ -276,6 +277,45 @@ const Settings: React.FC = () => {
           </List>
         </Paper>
       )}
+
+      {/* Saved Posts Section */}
+      <Paper sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        mb: { xs: 2, sm: 3 },
+        mx: { xs: 1, sm: 0 },
+        borderRadius: { xs: 0, sm: 1 },
+        boxShadow: { xs: 'none', sm: 1 },
+        border: { xs: '1px solid', sm: 'none' },
+        borderColor: 'divider'
+      }}>
+        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <BookmarkBorderIcon />
+          Your Content
+        </Typography>
+        
+        <Button
+          variant="outlined"
+          fullWidth
+          startIcon={<BookmarkBorderIcon />}
+          onClick={() => navigate('/saved-posts')}
+          sx={{
+            py: { xs: 1.5, sm: 2 },
+            fontSize: { xs: '0.9rem', sm: '1rem' },
+            fontWeight: 'medium',
+            justifyContent: 'flex-start',
+            textAlign: 'left'
+          }}
+        >
+          <Box sx={{ flex: 1, textAlign: 'left' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+              Saved Posts
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              View all posts you've saved
+            </Typography>
+          </Box>
+        </Button>
+      </Paper>
 
       {/* Security Section - Password Change */}
       <Paper sx={{ 

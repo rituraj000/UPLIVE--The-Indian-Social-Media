@@ -243,6 +243,16 @@ export const postsApi = {
   
   getExplorePosts: (page = 1, limit = 20) =>
     api.get<Post[]>(`/posts/explore/posts?page=${page}&limit=${limit}`),
+  
+  // Saved Posts API
+  savePost: (postId: string) =>
+    api.post(`/posts/${postId}/save`),
+  
+  unsavePost: (postId: string) =>
+    api.delete(`/posts/${postId}/save`),
+  
+  getSavedPosts: () =>
+    api.get<Post[]>('/posts/saved'),
 };
 
 // Stories API

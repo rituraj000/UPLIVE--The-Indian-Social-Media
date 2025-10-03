@@ -102,12 +102,22 @@ const userSchema = new mongoose.Schema(
 
 // Virtual for follower count
 userSchema.virtual("followerCount").get(function () {
-  return this.followers ? this.followers.length : 0;
+  if (!this.followers) return 0;
+  // Remove duplicates and self-follows
+  const uniqueFollowers = [
+    ...new Set(this.followers.map((id) => id.toString())),
+  ].filter((id) => id !== this._id.toString());
+  return uniqueFollowers.length;
 });
 
 // Virtual for following count
 userSchema.virtual("followingCount").get(function () {
-  return this.following ? this.following.length : 0;
+  if (!this.following) return 0;
+  // Remove duplicates and self-follows
+  const uniqueFollowing = [
+    ...new Set(this.following.map((id) => id.toString())),
+  ].filter((id) => id !== this._id.toString());
+  return uniqueFollowing.length;
 });
 
 // Virtual for post count

@@ -218,7 +218,7 @@ const Messages: React.FC = () => {
         width: '100%',
         height: '100%',
         border: { xs: 0, sm: 1 },
-        borderColor: 'divider',
+        borderColor: '#e8e5e0',
         borderRadius: { xs: 0, sm: 2 },
         overflow: 'hidden'
       }}>
@@ -229,11 +229,11 @@ const Messages: React.FC = () => {
             display: { xs: showChatView ? 'none' : 'block', md: 'block' },
             borderRadius: 0,
             borderRight: 1,
-            borderColor: 'divider'
+            borderColor: '#e8e5e0'
           }}
         >
           {/* Header */}
-          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: '#e8e5e0' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
               <Typography variant="h6" fontWeight="bold">
                 Messages
@@ -257,7 +257,18 @@ const Messages: React.FC = () => {
                     <SearchIcon />
                   </InputAdornment>
                 ),
-                sx: { borderRadius: 3 }
+                sx: { 
+                  borderRadius: 3,
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#e8e5e0',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#d0d0d0',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#E4405F',
+                  }
+                }
               }}
             />
           </Box>

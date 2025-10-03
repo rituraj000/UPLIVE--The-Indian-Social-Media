@@ -332,8 +332,13 @@ router.post("/:userId/follow", auth, async (req, res) => {
     }
 
     // Follow public account directly
-    currentUser.following.push(req.params.userId);
-    targetUser.followers.push(req.user.userId);
+    // Check for duplicates before adding
+    if (!currentUser.following.includes(req.params.userId)) {
+      currentUser.following.push(req.params.userId);
+    }
+    if (!targetUser.followers.includes(req.user.userId)) {
+      targetUser.followers.push(req.user.userId);
+    }
 
     await currentUser.save();
     await targetUser.save();

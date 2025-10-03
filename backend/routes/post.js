@@ -198,6 +198,34 @@ router.get("/feed", auth, async (req, res) => {
   }
 });
 
+// Get saved posts - MUST come before /:postId route
+router.get("/saved", auth, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Get user with populated saved posts
+    const user = await User.findById(userId).populate({
+      path: "savedPosts",
+      populate: {
+        path: "user",
+        select: "username fullName profilePicture isVerified",
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Filter out any null posts (in case some saved posts were deleted)
+    const savedPosts = user.savedPosts.filter((post) => post !== null);
+
+    res.json(savedPosts);
+  } catch (error) {
+    console.error("Get saved posts error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Get single post
 router.get("/:postId", auth, async (req, res) => {
   try {
@@ -520,6 +548,77 @@ router.get("/user/:userId", auth, async (req, res) => {
     res.json(posts);
   } catch (error) {
     console.error("Get user posts error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Save a post
+router.post("/:postId/save", auth, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const userId = req.user.userId;
+
+    // Check if post exists
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Get user and check if post is already saved
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isAlreadySaved = user.savedPosts.includes(postId);
+    if (isAlreadySaved) {
+      return res.status(400).json({ message: "Post already saved" });
+    }
+
+    // Add post to saved posts
+    user.savedPosts.push(postId);
+    await user.save();
+
+    res.json({
+      message: "Post saved successfully",
+      saved: true,
+      savedCount: user.savedPosts.length,
+    });
+  } catch (error) {
+    console.error("Save post error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Unsave a post
+router.delete("/:postId/save", auth, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const userId = req.user.userId;
+
+    // Get user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if post is saved
+    const isPostSaved = user.savedPosts.includes(postId);
+    if (!isPostSaved) {
+      return res.status(400).json({ message: "Post not saved" });
+    }
+
+    // Remove post from saved posts
+    user.savedPosts = user.savedPosts.filter((id) => id.toString() !== postId);
+    await user.save();
+
+    res.json({
+      message: "Post unsaved successfully",
+      saved: false,
+      savedCount: user.savedPosts.length,
+    });
+  } catch (error) {
+    console.error("Unsave post error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });

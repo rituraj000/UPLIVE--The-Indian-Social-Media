@@ -5,9 +5,26 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Pale cream/ivory background gradient */
+  background: linear-gradient(135deg, #FCFAF7 0%, #FFF5EA 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Ensure root element also has the cream background */
+#root {
+  background: linear-gradient(135deg, #FCFAF7 0%, #FFF5EA 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* Global background for all elements */
+html {
+  background: linear-gradient(135deg, #FCFAF7 0%, #FFF5EA 100%);
+  background-attachment: fixed;
 }

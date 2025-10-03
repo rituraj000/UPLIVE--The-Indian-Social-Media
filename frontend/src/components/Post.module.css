@@ -1,0 +1,685 @@
+/* Instagram-style Post Component CSS */
+
+/* 🎛️ CUSTOMIZABLE POST DIMENSIONS */
+/* 
+📝 HOW TO CUSTOMIZE POST SIZE:
+
+1. WIDTH SETTINGS:
+   --post-max-width-mobile: 100%    (Full width on phones)
+   --post-max-width-tablet: 400px   (Tablet width)
+   --post-max-width-desktop: 500px  (Desktop width)
+   --post-max-width-large: 600px    (Large screen width)
+
+2. ASPECT RATIO SETTINGS (Controls height relative to width):
+   --post-aspect-ratio-mobile: 125%  (4:5 portrait - taller)
+   --post-aspect-ratio-tablet: 100%  (1:1 square)
+   --post-aspect-ratio-desktop: 85%  (slightly wide)
+   --post-aspect-ratio-large: 75%    (landscape - wider)
+
+3. MAX HEIGHT SETTINGS (Prevents images from being too tall):
+   --post-max-height-mobile: none    (No limit on mobile)
+   --post-max-height-tablet: 400px   (Max 400px tall)
+   --post-max-height-desktop: 450px  (Max 450px tall)
+   --post-max-height-large: 500px    (Max 500px tall)
+
+🛠️ EXAMPLES:
+- For smaller posts: Change desktop width to 350px
+- For square posts everywhere: Set all aspect ratios to 100%
+- For wider posts: Change desktop ratio to 60% (more landscape)
+- For taller posts: Change desktop ratio to 120% (more portrait)
+*/
+:root {
+  --post-max-width-mobile: 100%;
+  --post-max-width-tablet: 400px;
+  --post-max-width-desktop: 470px;
+  --post-max-width-large: 470px;
+  
+  /* Image aspect ratios */
+  --post-aspect-ratio-mobile: 125%; /* 4:5 portrait */
+  --post-aspect-ratio-tablet: 100%;  /* 1:1 square */
+  --post-aspect-ratio-desktop: 125%;  /* 4:5 portrait */
+  --post-aspect-ratio-large: 125%;    /* 4:5 portrait */
+  
+  /* Video/Reel aspect ratios (more reasonable for feed viewing) */
+  --reel-aspect-ratio-mobile: 133%; /* 3:4 vertical (shorter than 9:16) */
+  --reel-aspect-ratio-tablet: 133%;  /* 3:4 vertical */
+  --reel-aspect-ratio-desktop: 133%; /* 3:4 vertical */
+  --reel-aspect-ratio-large: 133%;   /* 3:4 vertical */
+  
+  --post-max-height-mobile: none;
+  --post-max-height-tablet: 600px;
+  --post-max-height-desktop: 600px;
+  --post-max-height-large: 600px;
+}
+
+.post {
+  background-color: #ffffff;
+  border: 1px solid #e8e5e0; /* Slightly warmer border to match cream background */
+  border-radius: 8px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: var(--post-max-width-desktop);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); /* Softer shadow for cream background */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif;
+  position: relative;
+  overflow: hidden;
+  margin-left: auto;
+  margin-right: auto;
+  /* Ensure consistent width regardless of content */
+  min-width: 300px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 767px) {
+  .post {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    margin-bottom: 8px;
+    box-shadow: none;
+    margin-left: 0;
+    margin-right: 0;
+    max-width: var(--post-max-width-mobile);
+  }
+}
+
+/* Tablet responsiveness */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .post {
+    max-width: var(--post-max-width-tablet);
+  }
+}
+
+/* Large desktop responsiveness */
+@media (min-width: 1200px) {
+  .post {
+    max-width: var(--post-max-width-large);
+  }
+}
+
+/* 1. Post Header - Creator Information */
+.postHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: none;
+}
+
+@media (max-width: 767px) {
+  .postHeader {
+    padding: 8px 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .postHeader {
+    padding: 14px 18px; /* Slightly more padding on larger screens */
+  }
+}
+
+.creatorInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profilePicture {
+  width: 40px !important;
+  height: 40px !important;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.profilePicture:hover {
+  transform: scale(1.05);
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.username {
+  font-weight: 600 !important;
+  color: #262626 !important;
+  cursor: pointer;
+  font-size: 14px !important;
+  line-height: 18px !important;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.username:hover {
+  text-decoration: underline;
+}
+
+.verified {
+  color: #1da1f2;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.location {
+  color: #8e8e8e !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  font-weight: 400 !important;
+}
+
+.optionsMenu {
+  color: #262626 !important;
+  padding: 8px !important;
+}
+
+/* Follow Button Styles */
+.followButton {
+  background-color: #0095f6 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  padding: 6px 16px !important;
+  border-radius: 6px !important;
+  text-transform: none !important;
+  min-width: 70px !important;
+  height: 32px !important;
+  transition: all 0.2s ease !important;
+}
+
+.followButton:hover {
+  background-color: #0080d6 !important;
+  transform: translateY(-1px);
+}
+
+.followButton:disabled {
+  background-color: #cccccc !important;
+  color: #888888 !important;
+}
+
+@media (max-width: 480px) {
+  .followButton {
+    padding: 4px 12px !important;
+    font-size: 12px !important;
+    min-width: 60px !important;
+    height: 28px !important;
+  }
+}
+
+/* 2. Media Component - Images and Videos */
+.mediaContainer {
+  position: relative;
+  width: 100%;
+  padding-bottom: var(--post-aspect-ratio-mobile); /* Default for images */
+  overflow: hidden;
+  background-color: #fafafa;
+  max-height: var(--post-max-height-mobile);
+}
+
+/* Video/Reel specific container */
+.mediaContainer.videoMedia {
+  padding-bottom: var(--reel-aspect-ratio-mobile); /* Reel dimensions for videos */
+  max-height: 450px; /* Reduced height for better feed experience */
+}
+
+/* Responsive adjustments for images */
+@media (min-width: 768px) {
+  .mediaContainer {
+    padding-bottom: var(--post-aspect-ratio-tablet);
+    max-height: var(--post-max-height-tablet);
+  }
+  
+  .mediaContainer.videoMedia {
+    padding-bottom: var(--reel-aspect-ratio-tablet);
+    max-height: 450px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mediaContainer {
+    padding-bottom: var(--post-aspect-ratio-desktop);
+    max-height: var(--post-max-height-desktop);
+  }
+  
+  .mediaContainer.videoMedia {
+    padding-bottom: var(--reel-aspect-ratio-desktop);
+    max-height: 450px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .mediaContainer {
+    padding-bottom: var(--post-aspect-ratio-large);
+    max-height: var(--post-max-height-large);
+  }
+  
+  .mediaContainer.videoMedia {
+    padding-bottom: var(--reel-aspect-ratio-large);
+    max-height: 450px;
+  }
+}
+
+.postImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
+  background-color: #f5f5f5;
+}
+
+.postVideo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
+}
+
+/* Video Container for Instagram-style autoplay */
+.videoContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Mute Button for Videos */
+.muteButton {
+  position: absolute !important;
+  top: 12px !important;
+  right: 12px !important;
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  color: white !important;
+  z-index: 10 !important;
+  width: 32px !important;
+  height: 32px !important;
+  transition: all 0.2s ease !important;
+}
+
+.muteButton:hover {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  transform: scale(1.1) !important;
+}
+
+/* Heart Animation for Double Tap */
+.heartAnimation {
+  animation: heartPop 1s ease-out forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes heartPop {
+  0% {
+    transform: scale(0) rotate(-30deg);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.2) rotate(-15deg);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(0.95) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.3) rotate(0deg) translateY(-20px);
+    opacity: 0;
+  }
+}
+
+/* 3. Interaction Bar */
+.interactionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 767px) {
+  .interactionBar {
+    padding: 8px 12px 4px;
+    gap: 4px;
+  }
+}
+
+.primaryActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.secondaryActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .primaryActions {
+    gap: 2px;
+  }
+  
+  .secondaryActions {
+    gap: 4px;
+  }
+}
+
+.actionButton {
+  padding: 8px !important;
+  color: #262626 !important;
+  transition: transform 0.2s ease, color 0.2s ease;
+  /* Remove all focus and ripple effects */
+  outline: none !important;
+  border: none !important;
+  background-color: transparent !important;
+}
+
+.actionButton:hover {
+  transform: scale(1.1);
+  outline: none !important;
+  background-color: transparent !important;
+}
+
+.actionButton:focus {
+  outline: none !important;
+  background-color: transparent !important;
+}
+
+.actionButton:active {
+  outline: none !important;
+  background-color: transparent !important;
+}
+
+.actionButton.liked {
+  color: #ed4956 !important;
+}
+
+.actionButton.saved {
+  color: #262626 !important;
+}
+
+.actionLabel {
+  display: none !important; /* Hide comment text completely */
+  color: #262626 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  margin-left: 4px;
+  margin-right: 12px;
+}
+
+.mobileHidden {
+  display: none !important; /* Always hidden - no comment text */
+}
+
+@media (max-width: 480px) {
+  .mobileHidden {
+    display: none !important; /* Keep hidden on mobile */
+  }
+  
+  .actionLabel {
+    display: none !important; /* Keep hidden on mobile */
+    margin-right: 8px;
+  }
+}
+
+.supportButton {
+  background-color: #ff6b35 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  padding: 4px 12px !important;
+  border-radius: 6px !important;
+  text-transform: none !important;
+  box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3) !important;
+  transition: all 0.2s ease !important;
+  min-width: auto !important;
+  height: 28px !important;
+}
+
+@media (max-width: 480px) {
+  .supportButton {
+    padding: 3px 10px !important;
+    font-size: 11px !important;
+    height: 26px !important;
+  }
+}
+
+.supportButton:hover {
+  background-color: #e55a2b !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 107, 53, 0.4) !important;
+}
+
+.supportButton:disabled {
+  background-color: #cccccc !important;
+  color: #888888 !important;
+  box-shadow: none !important;
+}
+
+/* 4. Bottom Section - Caption & Metrics */
+.postContent {
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 767px) {
+  .postContent {
+    padding: 0 12px 12px;
+    gap: 6px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .postContent {
+    padding: 0 18px 18px; /* More padding on larger screens */
+    gap: 10px;
+  }
+}
+
+.likeMetric {
+  color: #262626 !important;
+  font-size: 14px !important;
+  line-height: 18px !important;
+  font-weight: 400 !important;
+}
+
+.boldText {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boldText:hover {
+  text-decoration: underline;
+}
+
+.caption {
+  color: #262626 !important;
+  font-size: 14px !important;
+  line-height: 18px !important;
+  font-weight: 400 !important;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+@media (max-width: 480px) {
+  .caption {
+    font-size: 13px !important;
+    line-height: 16px !important;
+  }
+}
+
+.usernameInCaption {
+  font-weight: 600;
+  cursor: pointer;
+  color: #262626;
+}
+
+.usernameInCaption:hover {
+  text-decoration: underline;
+}
+
+.mention {
+  color: #003569;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mention:hover {
+  text-decoration: underline;
+}
+
+.hashtag {
+  color: #003569;
+  cursor: pointer;
+}
+
+.hashtag:hover {
+  text-decoration: underline;
+}
+
+.showMore {
+  background: none;
+  border: none;
+  color: #8e8e8e;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  padding: 0;
+  margin-left: 4px;
+}
+
+.showMore:hover {
+  text-decoration: underline;
+}
+
+.commentCount {
+  color: #8e8e8e !important;
+  font-size: 14px !important;
+  line-height: 18px !important;
+  cursor: pointer;
+  font-weight: 400 !important;
+}
+
+.commentCount:hover {
+  text-decoration: underline;
+}
+
+.hashtagContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.hashtagChip {
+  background-color: transparent !important;
+  border: 1px solid #dbdbdb !important;
+  color: #003569 !important;
+  font-size: 12px !important;
+  height: 24px !important;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.hashtagChip:hover {
+  background-color: #f7f7f7 !important;
+}
+
+.timestamp {
+  color: #8e8e8e !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  font-weight: 400 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  margin-top: 4px;
+}
+
+/* Animation for like heart */
+@keyframes likeAnimation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.actionButton.liked svg {
+  animation: likeAnimation 0.3s ease;
+}
+
+/* Accessibility - Remove blue focus circles */
+.actionButton:focus {
+  outline: none !important; /* Remove blue circle on click */
+  box-shadow: none !important; /* Remove any focus shadow */
+}
+
+.actionButton:focus-visible {
+  outline: none !important; /* Remove focus outline */
+}
+
+/* Remove focus outline from all action buttons */
+.actionButton,
+.actionButton:active,
+.actionButton:focus,
+.actionButton:hover {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.username:focus,
+.usernameInCaption:focus,
+.mention:focus,
+.hashtag:focus {
+  outline: 2px solid #0095f6;
+  outline-offset: 2px;
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  .post {
+    background-color: #000000;
+    border-color: #262626;
+  }
+  
+  .username,
+  .likeMetric,
+  .caption,
+  .usernameInCaption,
+  .actionButton {
+    color: #ffffff !important;
+  }
+  
+  .location,
+  .commentCount,
+  .timestamp {
+    color: #a8a8a8 !important;
+  }
+  
+  .showMore {
+    color: #a8a8a8;
+  }
+}
