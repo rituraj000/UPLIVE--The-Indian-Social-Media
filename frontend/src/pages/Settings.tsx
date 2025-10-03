@@ -352,7 +352,7 @@ const Settings: React.FC = () => {
         
         <Box sx={{ mb: 2 }}>
           <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6 }}>
-            This is a Social Media App created by <strong>Indian dev</strong> for the people of India.
+            This is a Social Media App created by <strong>Ritu Raj</strong> for the people of India.
           </Typography>
           
           <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6, color: 'primary.main', fontWeight: 'medium' }}>

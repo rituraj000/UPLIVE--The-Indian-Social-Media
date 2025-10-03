@@ -50,7 +50,7 @@ const Post: React.FC<PostProps> = ({
   onSupport,
   onFollow,
   isLiked = false,
-  isSaved = false,
+  isSaved = false, 
   isFollowing = false,
   followLoading = false
 }) => {
