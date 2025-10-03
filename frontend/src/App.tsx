@@ -49,7 +49,7 @@ const theme = createTheme({
       main: '#E4405F',
     },
     background: {
-      default: '#FCFAF7', // Pale cream background
+      default: '#ffffff', // White background
     },
   },
   typography: {

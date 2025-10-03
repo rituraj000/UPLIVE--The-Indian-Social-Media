@@ -218,7 +218,7 @@ const Messages: React.FC = () => {
         width: '100%',
         height: '100%',
         border: { xs: 0, sm: 1 },
-        borderColor: '#e8e5e0',
+        borderColor: 'divider',
         borderRadius: { xs: 0, sm: 2 },
         overflow: 'hidden'
       }}>
@@ -229,11 +229,11 @@ const Messages: React.FC = () => {
             display: { xs: showChatView ? 'none' : 'block', md: 'block' },
             borderRadius: 0,
             borderRight: 1,
-            borderColor: '#e8e5e0'
+            borderColor: 'divider'
           }}
         >
           {/* Header */}
-          <Box sx={{ p: 2, borderBottom: 1, borderColor: '#e8e5e0' }}>
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
               <Typography variant="h6" fontWeight="bold">
                 Messages
@@ -260,10 +260,10 @@ const Messages: React.FC = () => {
                 sx: { 
                   borderRadius: 3,
                   '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#e8e5e0',
+                    borderColor: '#e0e0e0',
                   },
                   '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#d0d0d0',
+                    borderColor: '#bdbdbd',
                   },
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                     borderColor: '#E4405F',

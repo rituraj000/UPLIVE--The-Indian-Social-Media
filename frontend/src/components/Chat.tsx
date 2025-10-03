@@ -378,7 +378,7 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
           top: 0,
           zIndex: 10,
           backgroundColor: 'white',
-          borderBottom: '1px solid #e8e5e0'
+          borderBottom: '1px solid #e0e0e0'
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -686,7 +686,7 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
           p: 2, 
           borderRadius: 0,
           flexShrink: 0,
-          borderTop: '1px solid #e8e5e0',
+          borderTop: '1px solid #e0e0e0',
           position: 'sticky',
           bottom: 0,
           backgroundColor: 'white',
@@ -713,10 +713,10 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
               sx: { 
                 borderRadius: 3,
                 '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#e8e5e0',
+                  borderColor: '#e0e0e0',
                 },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#d0d0d0',
+                  borderColor: '#bdbdbd',
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                   borderColor: '#E4405F',
