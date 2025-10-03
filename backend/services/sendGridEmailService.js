@@ -54,7 +54,8 @@ class SendGridEmailService {
       // Use environment-specific client URL
       const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
       const verificationUrl = `${clientUrl}/verify-email?token=${token}`;
-      const fromEmail = process.env.EMAIL_FROM || "noreply@uplive.com";
+      // Use your verified SendGrid email address
+      const fromEmail = process.env.EMAIL_FROM || "noreply.uplive@gmail.com";
 
       console.log("🔗 Verification URL generated:", verificationUrl);
 
@@ -124,7 +125,7 @@ class SendGridEmailService {
     }
 
     try {
-      const fromEmail = process.env.EMAIL_FROM || "noreply@uplive.com";
+      const fromEmail = process.env.EMAIL_FROM || "noreply.uplive@gmail.com";
 
       const msg = {
         to: email,
