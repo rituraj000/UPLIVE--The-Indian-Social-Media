@@ -36,46 +36,24 @@ class EmailVerificationService {
 
       await verification.save();
 
-      // Check if SendGrid is properly configured
-      const hasSendGridConfig =
-        process.env.SENDGRID_API_KEY &&
-        process.env.SENDGRID_API_KEY !== "your_sendgrid_api_key_here";
-
-      if (hasSendGridConfig) {
-        // Use SendGrid directly instead of queue (Render blocks SMTP)
-        console.log("Sending verification email directly via SendGrid...");
-        const emailService = require("./sendGridEmailService");
-        try {
-          const emailResult = await emailService.sendVerificationEmail({
-            email,
-            token: verification.token,
-            userId,
-            correlationId: crypto.randomUUID(),
-          });
-          console.log("Verification email sent successfully via SendGrid");
-        } catch (emailError) {
-          console.error("SendGrid email send failed:", emailError.message);
-          // Delete the verification record since email failed
-          await EmailVerification.findByIdAndDelete(verification._id);
-          throw new Error(
-            `Failed to send verification email: ${emailError.message}`
-          );
-        }
-      } else {
-        // SendGrid not configured - log the token for manual verification in development
-        console.log(
-          "⚠️  SendGrid not configured. Email verification disabled."
+      // Use SendGrid directly instead of queue (Render blocks SMTP)
+      console.log("Sending verification email directly via SendGrid...");
+      const emailService = require("./sendGridEmailService");
+      try {
+        const emailResult = await emailService.sendVerificationEmail({
+          email,
+          token: verification.token,
+          userId,
+          correlationId: crypto.randomUUID(),
+        });
+        console.log("Verification email sent successfully via SendGrid");
+      } catch (emailError) {
+        console.error("SendGrid email send failed:", emailError.message);
+        // Delete the verification record since email failed
+        await EmailVerification.findByIdAndDelete(verification._id);
+        throw new Error(
+          `Failed to send verification email: ${emailError.message}`
         );
-        console.log(
-          "🔧 Development Mode: Auto-verify user or use this token manually:"
-        );
-        console.log(
-          `   Verification URL: http://localhost:3000/verify-email?token=${token}`
-        );
-        console.log("   This would normally be sent via email in production.");
-
-        // In development mode, you could auto-verify the user or just log the token
-        // For now, we'll just log it so you can manually verify if needed
       }
 
       console.log("Email verification created:", {
@@ -83,7 +61,6 @@ class EmailVerificationService {
         email,
         tokenId: verification._id,
         expiresAt: verification.expiresAt,
-        sendGridConfigured: hasSendGridConfig,
       });
 
       return verification;

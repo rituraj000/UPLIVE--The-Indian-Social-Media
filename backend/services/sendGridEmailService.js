@@ -65,33 +65,12 @@ class SendGridEmailService {
           email: fromEmail,
           name: "UPLIVE Team",
         },
-        subject: "Verify your UPLIVE account - Action Required",
+        subject: "🇮🇳 Verify your UPLIVE account - Made in India",
         html: this.getVerificationEmailHTML(verificationUrl),
         text: this.getVerificationEmailText(verificationUrl),
         headers: {
           "X-Correlation-ID": correlationId,
         },
-        // Enhanced settings for better deliverability
-        mail_settings: {
-          spam_check: {
-            enable: true,
-            threshold: 1,
-          },
-        },
-        tracking_settings: {
-          click_tracking: {
-            enable: true,
-            enable_text: false,
-          },
-          open_tracking: {
-            enable: true,
-          },
-          subscription_tracking: {
-            enable: false,
-          },
-        },
-        // Set priority for faster delivery
-        priority: 1,
       };
 
       console.log("📤 Attempting to send email via SendGrid:", {
@@ -187,56 +166,46 @@ class SendGridEmailService {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Verify Your UPLIVE Account</title>
       </head>
-      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; background-color: #f8f9fa;">
-        
-        <div style="background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          <!-- Header -->
-          <div style="background: #2563eb; padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">UPLIVE</h1>
-            <p style="color: #e0e7ff; margin: 5px 0 0 0; font-size: 14px;">India's Social Media Platform</p>
-          </div>
-          
-          <!-- Content -->
-          <div style="padding: 40px 30px;">
-            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px;">Verify Your Account</h2>
-            
-            <p style="color: #4b5563; margin: 0 0 20px 0; font-size: 16px;">
-              Thank you for joining UPLIVE. To complete your registration and secure your account, please verify your email address by clicking the button below.
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${verificationUrl}" style="background: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);">
-                Verify Email Address
-              </a>
-            </div>
-            
-            <p style="color: #6b7280; font-size: 14px; margin: 30px 0 10px 0;">
-              If the button doesn't work, copy and paste this link into your browser:
-            </p>
-            <p style="color: #2563eb; font-size: 14px; word-break: break-all; background: #f3f4f6; padding: 10px; border-radius: 4px; margin: 0;">
-              ${verificationUrl}
-            </p>
-          </div>
-          
-          <!-- Footer -->
-          <div style="background: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
-            <p style="color: #6b7280; font-size: 12px; margin: 0 0 10px 0;">
-              This verification link will expire in 5 minutes for security.
-            </p>
-            <p style="color: #6b7280; font-size: 12px; margin: 0;">
-              If you didn't create an UPLIVE account, please ignore this email.
-            </p>
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-              <p style="color: #374151; font-size: 13px; font-weight: 600; margin: 0;">
-                UPLIVE Team
-              </p>
-              <p style="color: #6b7280; font-size: 12px; margin: 5px 0 0 0;">
-                Made in India with care
-              </p>
-            </div>
-          </div>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🇮🇳 Welcome to UPLIVE</h1>
+          <p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">India's Own Social Media Platform</p>
         </div>
         
+        <div style="background: #f9f9f9; padding: 30px; border-radius: 10px; margin-bottom: 30px;">
+          <h2 style="color: #333; margin-top: 0;">🎉 Thank you for joining UPLIVE!</h2>
+          <p>We're excited to have you as part of India's growing social media community. To complete your registration and start connecting with friends, please verify your email address.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${verificationUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+              ✅ Verify My Account
+            </a>
+          </div>
+          
+          <p style="margin-top: 30px; font-size: 14px; color: #666;">
+            If the button above doesn't work, copy and paste this link into your browser:<br>
+            <a href="${verificationUrl}" style="color: #667eea; word-break: break-all;">${verificationUrl}</a>
+          </p>
+        </div>
+        
+        <div style="background: #fff; border: 2px solid #e0e0e0; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+          <h3 style="color: #333; margin-top: 0;">🚀 What's Next?</h3>
+          <ul style="color: #666; padding-left: 20px;">
+            <li>Complete your profile with a photo and bio</li>
+            <li>Start following friends and interesting people</li>
+            <li>Share your first post with the community</li>
+            <li>Explore trending content from across India</li>
+          </ul>
+        </div>
+        
+        <div style="text-align: center; padding: 20px; color: #999; font-size: 14px;">
+          <p>This link will expire in 24 hours for security reasons.</p>
+          <p>If you didn't create an account with UPLIVE, please ignore this email.</p>
+          <p style="margin-top: 20px;">
+            <strong>UPLIVE Team</strong><br>
+            Made with ❤️ in India 🇮🇳
+          </p>
+        </div>
       </body>
       </html>
     `;
@@ -244,23 +213,26 @@ class SendGridEmailService {
 
   getVerificationEmailText(verificationUrl) {
     return `
-UPLIVE - India's Social Media Platform
+🇮🇳 Welcome to UPLIVE - India's Own Social Media Platform!
 
-VERIFY YOUR ACCOUNT
+Thank you for joining UPLIVE! We're excited to have you as part of India's growing social media community.
 
-Thank you for joining UPLIVE. To complete your registration and secure your account, please verify your email address by clicking the link below:
+To complete your registration and start connecting with friends, please verify your email address by clicking the link below:
 
 ${verificationUrl}
 
-This verification link will expire in 24 hours for security.
+What's Next?
+- Complete your profile with a photo and bio
+- Start following friends and interesting people
+- Share your first post with the community
+- Explore trending content from across India
 
-If you didn't create an UPLIVE account, please ignore this email.
+This link will expire in 24 hours for security reasons.
 
----
+If you didn't create an account with UPLIVE, please ignore this email.
+
 UPLIVE Team
-Made in India with care
-
-For support, contact us at support@uplive.com
+Made with ❤️ in India 🇮🇳
     `;
   }
 
