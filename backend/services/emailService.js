@@ -1,5 +1,17 @@
 const nodemailer = require("nodemailer");
-const fs = require("fs").promises;
+c      /    } catch (error) {
+      console.error('❌ Failed to initialize email service:', error.message);
+      console.error('🔍 Debug info:', {
+        emailUser: process.env.EMAIL_USER ? 'Set' : 'Not set',
+        emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set',
+        nodeEnv: process.env.NODE_ENV,
+        errorType: error.constructor.name
+      });
+      throw new Error(`Email service initialization failed: ${error.message}`);
+    }rify connection
+      await this.transporter.verify();
+      console.log('✅ Email service initialized successfully');
+      this.initialized = true; fs = require("fs").promises;
 const path = require("path");
 
 class EmailService {
@@ -21,6 +33,11 @@ class EmailService {
 
   async initializeTransporter() {
     try {
+      console.log('🔄 Initializing email service...');
+      console.log('📧 EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
+      console.log('🔑 EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set (length: ' + process.env.EMAIL_PASS.length + ')' : 'Not set');
+      console.log('🌍 NODE_ENV:', process.env.NODE_ENV);
+      
       // Check if credentials are provided
       if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         throw new Error(
@@ -48,7 +65,12 @@ class EmailService {
   }
 
   async sendVerificationEmail({ email, token, userId, correlationId }) {
-    await this.ensureInitialized();
+    try {
+      await this.ensureInitialized();
+    } catch (error) {
+      console.error('❌ Email service initialization failed:', error.message);
+      throw new Error('Email service not available. Please check server configuration.');
+    }
 
     try {
       // Use environment-specific client URL

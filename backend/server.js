@@ -16,6 +16,7 @@ const storyRoutes = require("./routes/story");
 const messageRoutes = require("./routes/message");
 const notificationRoutes = require("./routes/notification");
 const healthRoutes = require("./routes/health");
+const emailHealthRoutes = require("./routes/email-health");
 
 // Import email services
 const emailService = require("./services/emailService");
@@ -153,10 +154,12 @@ app.use("/api/stories", storyRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-// Health check
+// Health checks
 app.get("/api/health", (req, res) => {
   res.json({ message: "UPLIVE API is running!" });
 });
+
+app.use("/api", emailHealthRoutes);
 
 // Test direct route for privacy features
 app.get("/api/test-direct", (req, res) => {
@@ -179,7 +182,7 @@ async function initializeServices() {
     } else {
       console.log("⚠️  Email service not configured (optional)");
     }
-    
+
     console.log("✅ Email queue initialized");
   } catch (error) {
     console.error("❌ Failed to initialize services:", error.message);
