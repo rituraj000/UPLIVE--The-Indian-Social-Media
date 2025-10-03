@@ -200,26 +200,68 @@ router.post(
           correlationId,
         });
 
-        // Create email verification - this will throw if email fails
-        const verification = await emailVerificationService.createVerification(
-          savedUser._id.toString(),
-          email,
-          req.ip,
-          req.get("User-Agent")
-        );
+        // Check if SendGrid is configured
+        const hasSendGridConfig =
+          process.env.SENDGRID_API_KEY &&
+          process.env.SENDGRID_API_KEY !== "your_sendgrid_api_key_here";
 
-        // Verify that email was actually sent
-        if (!verification) {
-          // If verification creation failed, delete the user and throw error
-          await User.findByIdAndDelete(savedUser._id);
-          throw new Error("Failed to send verification email");
+        if (hasSendGridConfig) {
+          // Create email verification - this will throw if email fails
+          const verification =
+            await emailVerificationService.createVerification(
+              savedUser._id.toString(),
+              email,
+              req.ip,
+              req.get("User-Agent")
+            );
+
+          // Verify that email was actually sent
+          if (!verification) {
+            // If verification creation failed, delete the user and throw error
+            await User.findByIdAndDelete(savedUser._id);
+            throw new Error("Failed to send verification email");
+          }
+
+          res.status(201).json({
+            message:
+              "Account created! Please check your email to verify your account.",
+            requiresVerification: true,
+          });
+        } else {
+          // SendGrid not configured - allow registration without email verification in development
+          console.log(
+            "⚠️  SendGrid not configured. Allowing registration without email verification (development mode)."
+          );
+
+          // Auto-verify the user in development mode
+          savedUser.isEmailVerified = true;
+          savedUser.emailVerifiedAt = new Date();
+          savedUser.registrationCompleted = true;
+          await savedUser.save();
+
+          // Generate JWT token for immediate login
+          const jwtToken = jwt.sign(
+            { userId: savedUser._id },
+            process.env.JWT_SECRET || "fallback_secret",
+            { expiresIn: "7d" }
+          );
+
+          res.status(201).json({
+            message:
+              "Account created successfully! (Development mode - email verification bypassed)",
+            token: jwtToken,
+            user: {
+              id: savedUser._id,
+              username: savedUser.username,
+              email: savedUser.email,
+              fullName: savedUser.fullName,
+              profilePicture: savedUser.profilePicture,
+              isEmailVerified: savedUser.isEmailVerified,
+              hasSeenWelcome: savedUser.hasSeenWelcome,
+            },
+            requiresVerification: false,
+          });
         }
-
-        res.status(201).json({
-          message:
-            "Account created! Please check your email to verify your account.",
-          requiresVerification: true,
-        });
       } catch (emailError) {
         console.error("Email verification failed during registration:", {
           email,
