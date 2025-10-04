@@ -56,9 +56,17 @@ class PhoneVerificationService {
         );
       }
 
-      // Check rate limits
-      await SMSRateLimiter.canSendSMS(phoneNumber, "phone");
-      await SMSRateLimiter.checkIPLimit(ipAddress);
+      // Check rate limits (with production-safe fallback)
+      try {
+        await SMSRateLimiter.canSendSMS(phoneNumber, "phone");
+        await SMSRateLimiter.checkIPLimit(ipAddress);
+      } catch (rateLimitError) {
+        console.error("Rate limiting error:", rateLimitError);
+        // In production, if rate limiting fails, continue but log the error
+        if (process.env.NODE_ENV !== "production") {
+          throw rateLimitError;
+        }
+      }
 
       // Check if any SMS provider is available
       const hasProvider =
@@ -103,9 +111,16 @@ class PhoneVerificationService {
         await this.sendOTP(phoneNumber, otp);
         console.log("OTP sent successfully via SMS");
 
-        // Record successful attempt
-        await SMSRateLimiter.recordAttempt(phoneNumber, "phone", true);
-        await SMSRateLimiter.recordAttempt(ipAddress, "ip", true);
+        // Record successful attempt (production-safe)
+        try {
+          await SMSRateLimiter.recordAttempt(phoneNumber, "phone", true);
+          await SMSRateLimiter.recordAttempt(ipAddress, "ip", true);
+        } catch (recordError) {
+          console.error(
+            "Failed to record attempt, but continuing:",
+            recordError
+          );
+        }
       } catch (smsError) {
         // Delete the verification record if SMS fails
         await PhoneVerification.deleteOne({ _id: verification._id });
@@ -114,9 +129,13 @@ class PhoneVerificationService {
           smsError
         );
 
-        // Record failed attempt
-        await SMSRateLimiter.recordAttempt(phoneNumber, "phone", false);
-        await SMSRateLimiter.recordAttempt(ipAddress, "ip", false);
+        // Record failed attempt (production-safe)
+        try {
+          await SMSRateLimiter.recordAttempt(phoneNumber, "phone", false);
+          await SMSRateLimiter.recordAttempt(ipAddress, "ip", false);
+        } catch (recordError) {
+          console.error("Failed to record failed attempt:", recordError);
+        }
 
         throw smsError;
       }

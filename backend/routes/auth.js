@@ -8,10 +8,22 @@ const PasswordReset = require("../models/PasswordReset");
 const auth = require("../middleware/auth");
 const emailVerificationService = require("../services/emailVerificationService");
 const PhoneVerificationService = require("../services/phoneVerificationService");
+const SimplePhoneVerificationService = require("../services/simplePhoneVerificationService");
 const emailQueue = require("../services/emailQueue");
 
-// Create phone verification service instance
-const phoneVerificationService = new PhoneVerificationService();
+// Create phone verification service instances (with fallback)
+let phoneVerificationService;
+try {
+  phoneVerificationService = new PhoneVerificationService();
+  console.log("✅ Full PhoneVerificationService initialized");
+} catch (error) {
+  console.error(
+    "❌ Full PhoneVerificationService failed, using simple version:",
+    error.message
+  );
+  phoneVerificationService = new SimplePhoneVerificationService();
+}
+
 const emailService = require("../services/emailService");
 const { v4: uuidv4 } = require("uuid");
 

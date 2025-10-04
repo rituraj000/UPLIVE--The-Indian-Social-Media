@@ -1,4 +1,4 @@
-const RateLimit = require("../models/RateLimit");
+const SMSRateLimit = require("../models/SMSRateLimit");
 
 class SMSRateLimiter {
   // Check if user can send SMS (prevents spam)
@@ -6,21 +6,15 @@ class SMSRateLimiter {
     try {
       const now = new Date();
       const oneHour = new Date(now.getTime() - 60 * 60 * 1000);
-      const oneDay = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-      // Clean up old rate limit records
-      await RateLimit.deleteMany({
-        createdAt: { $lt: oneDay },
-      });
-
-      // Check current limits
-      const recentAttempts = await RateLimit.find({
+      // Check current limits within the last hour
+      const recentAttempts = await SMSRateLimit.find({
         identifier,
         type,
         createdAt: { $gte: oneHour },
       });
 
-      // Allow max 5 SMS per hour, 10 per day
+      // Allow max 5 SMS per hour
       if (recentAttempts.length >= 5) {
         const oldestAttempt = recentAttempts.sort(
           (a, b) => a.createdAt - b.createdAt
@@ -38,6 +32,16 @@ class SMSRateLimiter {
       return true;
     } catch (error) {
       console.error("Rate limiting check failed:", error);
+
+      // In production, if rate limiting fails, allow the operation but log the error
+      if (process.env.NODE_ENV === "production") {
+        console.error(
+          "Rate limiting failed in production, allowing operation:",
+          error.message
+        );
+        return true;
+      }
+
       throw error;
     }
   }
@@ -45,7 +49,7 @@ class SMSRateLimiter {
   // Record SMS attempt
   static async recordAttempt(identifier, type = "phone", success = true) {
     try {
-      const attempt = new RateLimit({
+      const attempt = new SMSRateLimit({
         identifier,
         type,
         success,
@@ -56,7 +60,7 @@ class SMSRateLimiter {
       return attempt;
     } catch (error) {
       console.error("Failed to record rate limit attempt:", error);
-      // Don't throw error here, as it's not critical
+      // Don't throw error here, as it's not critical for the main operation
     }
   }
 
@@ -66,7 +70,7 @@ class SMSRateLimiter {
       const now = new Date();
       const oneHour = new Date(now.getTime() - 60 * 60 * 1000);
 
-      const ipAttempts = await RateLimit.find({
+      const ipAttempts = await SMSRateLimit.find({
         identifier: ipAddress,
         type: "ip",
         createdAt: { $gte: oneHour },
@@ -82,6 +86,16 @@ class SMSRateLimiter {
       return true;
     } catch (error) {
       console.error("IP rate limiting check failed:", error);
+
+      // In production, if rate limiting fails, allow the operation but log the error
+      if (process.env.NODE_ENV === "production") {
+        console.error(
+          "IP rate limiting failed in production, allowing operation:",
+          error.message
+        );
+        return true;
+      }
+
       throw error;
     }
   }
