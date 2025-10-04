@@ -1,6 +1,8 @@
 const crypto = require("crypto");
 const PhoneVerification = require("../models/PhoneVerification");
 const axios = require("axios");
+const SMSRateLimiter = require("../utils/smsRateLimiter");
+const PhoneNumberValidator = require("../utils/phoneNumberValidator");
 
 class PhoneVerificationService {
   constructor() {
@@ -47,10 +49,39 @@ class PhoneVerificationService {
     try {
       console.log("Creating phone verification:", { userId, phoneNumber });
 
+      // Validate phone number format
+      if (!PhoneNumberValidator.isValid(phoneNumber)) {
+        throw new Error(
+          "Invalid phone number format. Please enter a valid phone number."
+        );
+      }
+
+      // Check rate limits
+      await SMSRateLimiter.canSendSMS(phoneNumber, "phone");
+      await SMSRateLimiter.checkIPLimit(ipAddress);
+
+      // Check if any SMS provider is available
+      const hasProvider =
+        this.twilioClient ||
+        this.MSG91_API_KEY ||
+        this.sns ||
+        process.env.NODE_ENV === "development";
+      if (!hasProvider) {
+        throw new Error(
+          "SMS service temporarily unavailable. Please contact support."
+        );
+      }
+
       // Delete any existing verification for this user/phone
-      await PhoneVerification.deleteMany({
+      const deletedCount = await PhoneVerification.deleteMany({
         $or: [{ userId }, { phoneNumber }],
       });
+
+      if (deletedCount.deletedCount > 0) {
+        console.log(
+          `Deleted ${deletedCount.deletedCount} existing verifications`
+        );
+      }
 
       const otp = this.generateOTP();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -65,9 +96,30 @@ class PhoneVerificationService {
       });
 
       await verification.save();
+      console.log("Verification record saved to database");
 
       // Send OTP via SMS
-      await this.sendOTP(phoneNumber, otp);
+      try {
+        await this.sendOTP(phoneNumber, otp);
+        console.log("OTP sent successfully via SMS");
+
+        // Record successful attempt
+        await SMSRateLimiter.recordAttempt(phoneNumber, "phone", true);
+        await SMSRateLimiter.recordAttempt(ipAddress, "ip", true);
+      } catch (smsError) {
+        // Delete the verification record if SMS fails
+        await PhoneVerification.deleteOne({ _id: verification._id });
+        console.error(
+          "SMS sending failed, verification record deleted:",
+          smsError
+        );
+
+        // Record failed attempt
+        await SMSRateLimiter.recordAttempt(phoneNumber, "phone", false);
+        await SMSRateLimiter.recordAttempt(ipAddress, "ip", false);
+
+        throw smsError;
+      }
 
       console.log("Phone verification created successfully:", {
         userId,
@@ -76,7 +128,38 @@ class PhoneVerificationService {
       return verification;
     } catch (error) {
       console.error("Error creating phone verification:", error);
-      throw new Error("Failed to send OTP");
+
+      // Provide more specific error messages based on error type
+      if (error.message.includes("Invalid phone number format")) {
+        throw new Error(
+          "Please enter a valid phone number with country code (e.g., +91XXXXXXXXXX)."
+        );
+      } else if (error.message.includes("Too many")) {
+        throw error; // Pass through rate limit errors as-is
+      } else if (
+        error.message.includes("SMS service temporarily unavailable")
+      ) {
+        throw error; // Pass through provider error
+      } else if (error.message.includes("Network")) {
+        throw new Error(
+          "Network connection error. Please check your internet and try again."
+        );
+      } else if (
+        error.message.includes("not verified") ||
+        error.message.includes("unverified")
+      ) {
+        throw new Error(
+          "This phone number is not verified with our SMS provider. Please contact support."
+        );
+      } else if (error.message.includes("MSG91 only supports")) {
+        throw new Error(
+          "This service currently only supports Indian phone numbers (+91)."
+        );
+      } else {
+        throw new Error(
+          "Unable to send OTP at this time. Please try again in a few minutes or contact support."
+        );
+      }
     }
   }
 
@@ -87,40 +170,63 @@ class PhoneVerificationService {
 
       // Format phone number (ensure it starts with country code)
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      console.log(`Formatted phone number: ${formattedPhone}`);
+
       const message = `Your UPLIVE verification code is: ${otp}. Valid for 10 minutes. Do not share this code with anyone.`;
 
       let result = null;
+      let lastError = null;
+      let attemptedProviders = [];
 
       // Try Twilio first
       if (this.twilioClient && process.env.TWILIO_PHONE_NUMBER) {
         try {
+          attemptedProviders.push("Twilio");
+          console.log("Attempting SMS via Twilio...");
           result = await this.sendViaTwilio(formattedPhone, message);
           console.log("✅ SMS sent via Twilio:", result);
           return result;
         } catch (error) {
-          console.error("❌ Twilio SMS failed:", error.message);
+          lastError = error;
+          console.error("❌ Twilio SMS failed:", {
+            error: error.message,
+            code: error.code,
+            status: error.status,
+          });
         }
       }
 
       // Try MSG91 (Indian SMS provider)
       if (this.MSG91_API_KEY && this.MSG91_SENDER_ID) {
         try {
+          attemptedProviders.push("MSG91");
+          console.log("Attempting SMS via MSG91...");
           result = await this.sendViaMSG91(formattedPhone, otp);
-          console.log("SMS sent via MSG91:", result);
+          console.log("✅ SMS sent via MSG91:", result);
           return result;
         } catch (error) {
-          console.error("MSG91 SMS failed:", error.message);
+          lastError = error;
+          console.error("❌ MSG91 SMS failed:", {
+            error: error.message,
+            response: error.response?.data,
+          });
         }
       }
 
       // Try AWS SNS
       if (this.sns) {
         try {
+          attemptedProviders.push("AWS SNS");
+          console.log("Attempting SMS via AWS SNS...");
           result = await this.sendViaAWSSNS(formattedPhone, message);
-          console.log("SMS sent via AWS SNS:", result);
+          console.log("✅ SMS sent via AWS SNS:", result);
           return result;
         } catch (error) {
-          console.error("AWS SNS SMS failed:", error.message);
+          lastError = error;
+          console.error("❌ AWS SNS SMS failed:", {
+            error: error.message,
+            code: error.code,
+          });
         }
       }
 
@@ -137,10 +243,55 @@ class PhoneVerificationService {
         };
       }
 
-      throw new Error("No SMS provider configured");
+      // All providers failed
+      console.error(
+        `All SMS providers failed. Attempted: ${attemptedProviders.join(", ")}`
+      );
+
+      if (attemptedProviders.length === 0) {
+        throw new Error("No SMS provider configured. Please contact support.");
+      } else if (
+        lastError &&
+        lastError.message.includes("Invalid phone number")
+      ) {
+        throw new Error(
+          "Invalid phone number. Please check the format and try again."
+        );
+      } else if (
+        lastError &&
+        (lastError.code === 21614 || lastError.message.includes("unverified"))
+      ) {
+        throw new Error(
+          "Phone number not verified with SMS provider. Please contact support."
+        );
+      } else if (lastError && lastError.message.includes("Rate limit")) {
+        throw new Error(
+          "Too many SMS requests. Please wait a few minutes before trying again."
+        );
+      } else {
+        throw new Error(
+          `Failed to send SMS via all providers (${attemptedProviders.join(
+            ", "
+          )}). Please try again later.`
+        );
+      }
     } catch (error) {
       console.error("Error sending SMS OTP:", error);
-      throw new Error("Failed to send SMS");
+
+      // Re-throw specific errors, wrap generic ones
+      if (
+        error.message.includes("No SMS provider") ||
+        error.message.includes("Invalid phone number") ||
+        error.message.includes("not verified") ||
+        error.message.includes("Rate limit") ||
+        error.message.includes("Failed to send SMS via all providers")
+      ) {
+        throw error;
+      } else {
+        throw new Error(
+          "Unable to send SMS. Please try again or contact support."
+        );
+      }
     }
   }
 
@@ -164,23 +315,36 @@ class PhoneVerificationService {
   async sendViaMSG91(phoneNumber, otp) {
     const url = "https://api.msg91.com/api/v5/otp";
 
+    // Remove + and ensure it's a valid Indian number
+    const cleanNumber = phoneNumber.replace("+", "");
+
+    if (!cleanNumber.startsWith("91") || cleanNumber.length !== 12) {
+      throw new Error("MSG91 only supports Indian phone numbers (+91)");
+    }
+
     const data = {
-      template_id: MSG91_TEMPLATE_ID,
-      mobile: phoneNumber.replace("+", ""),
-      authkey: MSG91_API_KEY,
+      template_id: this.MSG91_TEMPLATE_ID,
+      mobile: cleanNumber,
+      authkey: this.MSG91_API_KEY,
       otp: otp,
-      sender: MSG91_SENDER_ID,
+      sender: this.MSG91_SENDER_ID,
     };
 
     const response = await axios.post(url, data, {
       headers: {
         "Content-Type": "application/json",
       },
+      timeout: 10000, // 10 second timeout
     });
+
+    // Check MSG91 response
+    if (response.data.type === "error") {
+      throw new Error(`MSG91 Error: ${response.data.message}`);
+    }
 
     return {
       success: true,
-      messageId: response.data.request_id,
+      messageId: response.data.request_id || response.data.message,
       phoneNumber,
       provider: "msg91",
     };
@@ -211,26 +375,8 @@ class PhoneVerificationService {
 
   // Format phone number to international format
   formatPhoneNumber(phoneNumber) {
-    // Remove any non-digit characters
-    let cleaned = phoneNumber.replace(/\D/g, "");
-
-    // If it starts with 91 (India) and has 12 digits, add +
-    if (cleaned.startsWith("91") && cleaned.length === 12) {
-      return "+" + cleaned;
-    }
-
-    // If it's 10 digits and doesn't start with country code, add +91 for India
-    if (cleaned.length === 10 && !cleaned.startsWith("91")) {
-      return "+91" + cleaned;
-    }
-
-    // If it already starts with +, return as is
-    if (phoneNumber.startsWith("+")) {
-      return phoneNumber;
-    }
-
-    // Default: add + if not present
-    return "+" + cleaned;
+    // Use the validator's formatting
+    return PhoneNumberValidator.formatForProvider(phoneNumber, "international");
   }
 
   // Verify OTP
