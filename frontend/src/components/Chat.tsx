@@ -41,6 +41,7 @@ import { messagesApi, usersApi } from '../services/api';
 import { Message, User, Conversation, Post } from '../types';
 import toast from 'react-hot-toast';
 import PostDetailModal from './PostDetailModal';
+import styles from './Chat.module.css';
 
 interface ChatProps {
   selectedUser?: User;
@@ -400,7 +401,7 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+      <Box className={styles.loadingContainer}>
         <CircularProgress />
       </Box>
     );
@@ -408,7 +409,7 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
 
   if (!chatUser) {
     return (
-      <Box sx={{ textAlign: 'center', p: 4 }}>
+      <Box className={styles.emptyStateSelect}>
         <Typography variant="h6" color="text.secondary">
           Select a conversation to start messaging
         </Typography>
@@ -427,17 +428,9 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
       {/* Chat Header - Sticky */}
       <Paper 
         elevation={1} 
-        sx={{ 
-          p: 2, 
-          borderRadius: 0,
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-          backgroundColor: 'white',
-          borderBottom: '1px solid #e0e0e0'
-        }}
+        className={styles.chatHeader}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box className={styles.chatHeaderContent}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {onBackToList && (
               <IconButton onClick={onBackToList}>
@@ -445,32 +438,29 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
               </IconButton>
             )}
             <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 1, 
-                cursor: 'pointer',
-                borderRadius: 2,
-                p: 1,
-                '&:hover': {
-                  backgroundColor: 'grey.100'
-                }
-              }}
+              className={styles.chatHeaderUser}
               onClick={() => navigate(`/${chatUser.username}`)}
             >
               <Avatar src={chatUser.profilePicture} alt={chatUser.username} />
-              <Box>
-                <Typography variant="subtitle1" fontWeight="bold">
+              <Box className={styles.chatHeaderUserInfo}>
+                <Typography 
+                  variant="subtitle1" 
+                  fontWeight="bold" 
+                  sx={{ color: '#ffffff !important' }}
+                >
                   {chatUser.username}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography 
+                  variant="caption" 
+                  sx={{ color: '#ffffff !important' }}
+                >
                   {chatUser.fullName}
                 </Typography>
               </Box>
             </Box>
           </Box>
           
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box className={styles.chatHeaderActions}>
             <IconButton>
               <PhoneIcon />
             </IconButton>
@@ -487,18 +477,10 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
       {/* Messages List */}
       <Box 
         ref={messagesContainerRef}
-        sx={{ 
-          flex: 1, 
-          overflow: 'auto', 
-          p: 1,
-          backgroundColor: 'grey.50',
-          minHeight: 0,
-          maxHeight: 'none',  // Remove height restriction
-          paddingBottom: 2  // Add bottom padding for better spacing
-        }}
+        className={styles.messagesContainer}
       >
         {messages.length === 0 ? (
-          <Box sx={{ textAlign: 'center', p: 4 }}>
+          <Box className={styles.emptyState}>
             <Typography variant="body2" color="text.secondary">
               No messages yet. Start a conversation!
             </Typography>
@@ -513,23 +495,15 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
               return (
                 <Box
                   key={message.id}
-                  sx={{
-                    display: 'flex',
-                    justifyContent: isOwn ? 'flex-end' : 'flex-start',
-                    mb: 1
-                  }}
+                  className={`${styles.messageContainer} ${isOwn ? styles.self : styles.other}`}
                 >
                   <Card
-                    sx={{
-                      maxWidth: '70%',
-                      backgroundColor: isOwn ? 'primary.main' : 'white',
-                      color: isOwn ? 'white' : 'text.primary'
-                    }}
+                    className={`${styles.messageBubble} ${isOwn ? styles.self : styles.other}`}
                   >
                     <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                       {/* Text Message */}
                       {message.content.text && (
-                        <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                        <Typography variant="body2" className={styles.messageContent}>
                           {message.content.text}
                         </Typography>
                       )}
@@ -541,21 +515,13 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
                             <img
                               src={message.content.media.url}
                               alt="Shared image"
-                              style={{
-                                maxWidth: '100%',
-                                borderRadius: '8px',
-                                display: 'block'
-                              }}
+                              className={`${styles.messageMedia} ${styles.image}`}
                             />
                           ) : (
                             <video
                               src={message.content.media.url}
                               controls
-                              style={{
-                                maxWidth: '100%',
-                                borderRadius: '8px',
-                                display: 'block'
-                              }}
+                              className={`${styles.messageMedia} ${styles.video}`}
                             />
                           )}
                         </Box>
@@ -565,16 +531,7 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
                       {message.content.post && (
                         <Box sx={{ mt: message.content.text ? 1 : 0 }}>
                           <Card 
-                            sx={{ 
-                              maxWidth: 300, 
-                              cursor: 'pointer',
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              '&:hover': {
-                                boxShadow: 2,
-                                borderColor: 'primary.main'
-                              }
-                            }}
+                            className={styles.sharedPost}
                             onClick={() => {
                               // Open post detail modal
                               if (message.content.post) {
@@ -585,27 +542,17 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
                           >
                             {/* Post Media */}
                             {message.content.post.media && message.content.post.media.length > 0 && (
-                              <Box sx={{ position: 'relative', height: 200, overflow: 'hidden' }}>
+                              <Box className={styles.sharedPostMedia}>
                                 {message.content.post.media[0].type === 'image' ? (
                                   <img
                                     src={message.content.post.media[0].url}
                                     alt="Shared post"
-                                    style={{
-                                      width: '100%',
-                                      height: '100%',
-                                      objectFit: 'cover',
-                                      display: 'block'
-                                    }}
+                                    className={styles.sharedPostImage}
                                   />
                                 ) : (
                                   <video
                                     src={message.content.post.media[0].url}
-                                    style={{
-                                      width: '100%',
-                                      height: '100%',
-                                      objectFit: 'cover',
-                                      display: 'block'
-                                    }}
+                                    className={styles.sharedPostVideo}
                                     muted
                                   />
                                 )}
@@ -630,9 +577,9 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
                               </Box>
                             )}
                             
-                            <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                            <CardContent className={styles.sharedPostContent}>
                               {/* Post Author */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <Box className={styles.sharedPostAuthor}>
                                 <Avatar
                                   src={message.content.post.user.profilePicture}
                                   alt={message.content.post.user.username}
@@ -647,22 +594,14 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
                               {message.content.post.caption && (
                                 <Typography 
                                   variant="body2" 
-                                  sx={{ 
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                    lineHeight: 1.2,
-                                    mb: 0.5
-                                  }}
+                                  className={styles.sharedPostCaption}
                                 >
                                   {message.content.post.caption}
                                 </Typography>
                               )}
                               
                               {/* Post Stats */}
-                              <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                              <Box className={styles.sharedPostStats}>
                                 <Typography variant="caption" color="text.secondary">
                                   {message.content.post.likeCount} {message.content.post.likeCount === 1 ? 'like' : 'likes'}
                                 </Typography>
@@ -674,12 +613,7 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
                               {/* Shared indicator */}
                               <Typography 
                                 variant="caption" 
-                                color="primary" 
-                                sx={{ 
-                                  display: 'block', 
-                                  mt: 1,
-                                  fontStyle: 'italic'
-                                }}
+                                className={styles.sharedPostIndicator}
                               >
                                 📤 Shared Post
                               </Typography>
@@ -691,12 +625,7 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
                       {/* Timestamp */}
                       <Typography 
                         variant="caption" 
-                        sx={{ 
-                          display: 'block', 
-                          mt: 0.5, 
-                          opacity: 0.7,
-                          fontSize: '0.75rem'
-                        }}
+                        className={styles.messageTimestamp}
                       >
                         {formatMessageTime(message.createdAt)}
                       </Typography>
@@ -708,19 +637,10 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
             
             {/* Seen Indicator */}
             {showSeen && (
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'flex-end', 
-                mt: 1, 
-                mr: 2 
-              }}>
+              <Box className={styles.seenIndicator}>
                 <Typography 
                   variant="caption" 
                   color="text.secondary"
-                  sx={{ 
-                    fontSize: '0.75rem',
-                    fontStyle: 'italic'
-                  }}
                 >
                   Seen {lastSeenAt && new Date(lastSeenAt).toLocaleTimeString([], { 
                     hour: '2-digit', 
@@ -738,57 +658,38 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
       {/* Message Input - Fixed at bottom with padding */}
       <Paper 
         elevation={1} 
-        sx={{ 
-          p: 2, 
-          borderRadius: 0,
-          flexShrink: 0,
-          borderTop: '1px solid #e0e0e0',
-          position: 'sticky',
-          bottom: 0,
-          backgroundColor: 'white',
-          zIndex: 10,
-          mb: 1  // Add margin bottom for better spacing
-        }}
+        className={styles.chatInputContainer}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton onClick={() => fileInputRef.current?.click()}>
-            <PhotoIcon />
-          </IconButton>
-          
-          <TextField
-            fullWidth
-            placeholder="Type a message..."
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            multiline
-            maxRows={4}
-            variant="outlined"
-            size="small"
-            InputProps={{
-              sx: { 
-                borderRadius: 3,
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#e0e0e0',
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#bdbdbd',
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E4405F',
-                }
-              }
-            }}
-          />
-          
-          <IconButton 
-            onClick={handleSendMessage}
-            disabled={!messageText.trim() || sending}
-            color="primary"
-          >
-            {sending ? <CircularProgress size={24} /> : <SendIcon />}
-          </IconButton>
-        </Box>
+        <IconButton 
+          onClick={() => fileInputRef.current?.click()}
+          className={styles.fileButton}
+        >
+          <PhotoIcon />
+        </IconButton>
+        
+        <TextField
+          fullWidth
+          placeholder="Type a message..."
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
+          onKeyPress={handleKeyPress}
+          multiline
+          maxRows={4}
+          variant="outlined"
+          size="small"
+          className={styles.chatInputField}
+          InputProps={{
+            className: styles.chatInputField
+          }}
+        />
+        
+        <IconButton 
+          onClick={handleSendMessage}
+          disabled={!messageText.trim() || sending}
+          className={styles.chatSendButton}
+        >
+          {sending ? <CircularProgress size={24} /> : <SendIcon />}
+        </IconButton>
       </Paper>
 
       {/* Hidden file input */}

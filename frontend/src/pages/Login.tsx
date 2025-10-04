@@ -9,31 +9,54 @@ import {
   Link,
   Divider,
   Container,
-  Alert
+  Alert,
+  Paper
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import GradientButton from '../components/GradientButton';
 
 const LoginContainer = styled(Container)({
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
   minHeight: '100vh',
-  backgroundColor: '#fafafa',
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'linear-gradient(135deg, #0F0F23 0%, #1F1F35 50%, #2D1B69 100%)',
+    zIndex: -1,
+  },
 });
 
-const LoginCard = styled(Card)({
+const LoginCard = styled(Paper)({
   width: '100%',
-  maxWidth: 350,
+  maxWidth: 400,
   textAlign: 'center',
+  padding: '40px 32px',
+  borderRadius: '24px',
+  background: 'rgba(31, 31, 53, 0.9)',
+  backdropFilter: 'blur(20px)',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
 });
 
 const Logo = styled(Typography)({
-  fontFamily: 'Billabong, cursive',
-  fontSize: '3rem',
-  fontWeight: 'bold',
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '3.5rem',
+  fontWeight: '800',
+  background: 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
   marginBottom: '2rem',
+  letterSpacing: '0.05em',
 });
 
 const Login: React.FC = () => {
@@ -105,14 +128,24 @@ const Login: React.FC = () => {
     <LoginContainer maxWidth="sm">
       <Box>
         <LoginCard>
-          <CardContent sx={{ p: 4 }}>
-            <Logo>UPLIVE</Logo>
-            
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
+          <Logo>UPLIVE</Logo>
+          
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#FFFFFF',
+                '& .MuiAlert-icon': {
+                  color: '#EF4444'
+                }
+              }}
+            >
+              {error}
+            </Alert>
+          )}
 
             <Box component="form" onSubmit={handleSubmit}>
               <TextField
@@ -137,15 +170,14 @@ const Login: React.FC = () => {
                 required
               />
               
-              <Button
+              <GradientButton
                 type="submit"
                 fullWidth
-                variant="contained"
                 sx={{ mt: 3, mb: 2 }}
                 disabled={loading}
               >
                 {loading ? 'Logging in...' : 'Log In'}
-              </Button>
+              </GradientButton>
             </Box>
 
             <Divider sx={{ my: 2 }}>OR</Divider>
@@ -158,24 +190,40 @@ const Login: React.FC = () => {
             >
               Forgot password?
             </Link>
-          </CardContent>
         </LoginCard>
 
-        <Card sx={{ mt: 1, maxWidth: 350, width: '100%' }}>
-          <CardContent sx={{ textAlign: 'center', py: 3 }}>
-            <Typography variant="body2">
-              Don't have an account?{' '}
-              <Link
-                component="button"
-                variant="body2"
-                onClick={() => navigate('/register')}
-                sx={{ fontWeight: 'bold' }}
-              >
-                Sign up
-              </Link>
-            </Typography>
-          </CardContent>
-        </Card>
+        <Paper sx={{ 
+          mt: 3, 
+          maxWidth: 400, 
+          width: '100%',
+          textAlign: 'center',
+          py: 3,
+          px: 4,
+          borderRadius: '16px',
+          background: 'rgba(31, 31, 53, 0.7)',
+          backdropFilter: 'blur(15px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+        }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+            Don't have an account?{' '}
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => navigate('/register')}
+              sx={{ 
+                fontWeight: 'bold',
+                color: '#A855F7',
+                textDecoration: 'none',
+                '&:hover': {
+                  color: '#EC4899',
+                  textDecoration: 'underline'
+                }
+              }}
+            >
+              Sign up
+            </Link>
+          </Typography>
+        </Paper>
 
         {/* Made in India Message */}
         <Box sx={{ 

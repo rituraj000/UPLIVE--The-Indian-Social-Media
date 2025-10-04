@@ -23,13 +23,295 @@ import {
   Close as CloseIcon,
    Check as CheckIcon,
   Message as MessageIcon,
+  Person as PersonIcon,
+  Notifications as NotificationsIcon,
+  Group as GroupIcon,
 } from '@mui/icons-material';
 import { notificationsApi, followApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Notification } from '../types';
 import toast from 'react-hot-toast';
+import styles from './NotificationsModal.module.css';
 
-// Helper functions for date formatting
+// Profile Avatar Component
+interface ProfileAvatarProps {
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  story?: boolean;
+  src?: string;
+  username?: string;
+}
+
+const ProfileAvatar: React.FC<ProfileAvatarProps> = ({ size = 'md', className = '', story = false, src, username }) => {
+  const sizeClasses: Record<string, string> = {
+    sm: styles.small,
+    md: styles.medium,
+    lg: styles.large,
+  };
+  
+  return (
+    <div className={`${styles.profileAvatar} ${story ? styles.withStory : ''}`}>
+      <div className={`${styles.avatarCircle} ${sizeClasses[size]} ${className}`}>
+        {src ? (
+          <img 
+            src={src} 
+            alt={username} 
+            style={{ 
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'cover', 
+              borderRadius: '50%' 
+            }}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const nextElement = target.nextElementSibling as HTMLElement;
+              if (nextElement) {
+                nextElement.style.display = 'flex';
+              }
+            }}
+          />
+        ) : null}
+        <div 
+          style={{ 
+            display: src ? 'none' : 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%'
+          }}
+        >
+          <PersonIcon sx={{ fontSize: size === 'sm' ? 16 : (size === 'md' ? 20 : 28) }} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Gradient Button Component
+interface GradientButtonProps {
+  children: React.ReactNode;
+  className?: string;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  disabled?: boolean;
+}
+
+const GradientButton: React.FC<GradientButtonProps> = ({ children, className = '', onClick, disabled = false }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`${styles.gradientButton} ${className}`}
+  >
+    {children}
+  </button>
+);
+
+// Notification Item Component
+interface NotificationItemProps {
+  notification: Notification;
+  onNotificationClick: (notification: Notification) => void;
+  onFollowBack: (notificationId: string, userId: string) => void;
+  onFollowRequestAction: (notificationId: string, action: 'approve' | 'decline', userId: string) => void;
+  followLoading: Set<string>;
+  followRequestLoading: Set<string>;
+  followingUsers: Set<string>;
+}
+
+const NotificationItem: React.FC<NotificationItemProps> = ({ 
+  notification, 
+  onNotificationClick, 
+  onFollowBack, 
+  onFollowRequestAction, 
+  followLoading, 
+  followRequestLoading, 
+  followingUsers 
+}) => {
+  const navigate = useNavigate();
+  
+  const handleUsernameClick = (e: React.MouseEvent, username: string) => {
+    e.stopPropagation();
+    navigate(`/${username}`);
+  };
+  
+  const getIcon = () => {
+    switch (notification.type) {
+      case 'like':
+        return <FavoriteIcon sx={{ fontSize: 18 }} className={styles.like} />;
+      case 'comment':
+        return <CommentIcon sx={{ fontSize: 18 }} className={styles.comment} />;
+      case 'follow':
+      case 'follow_request':
+      case 'follow_back_suggestion':
+        return <GroupIcon sx={{ fontSize: 18 }} className={styles.follow} />;
+      case 'follow_request_accepted':
+        return <GroupIcon sx={{ fontSize: 18 }} className={styles.followed} />;
+      default:
+        return <NotificationsIcon sx={{ fontSize: 18 }} className={styles.default} />;
+    }
+  };
+  
+  const getActionElement = () => {
+    // Follow request notifications
+    if (notification.type === 'follow_request') {
+      return (
+        <div className={styles.actionButtons}>
+          <button
+            className={styles.approveButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              onFollowRequestAction(notification.id, 'approve', notification.fromUser.id);
+            }}
+            disabled={followRequestLoading.has(notification.id)}
+          >
+            {followRequestLoading.has(notification.id) ? (
+              <CircularProgress size={12} color="inherit" />
+            ) : (
+              'Approve'
+            )}
+          </button>
+          <button
+            className={styles.declineButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              onFollowRequestAction(notification.id, 'decline', notification.fromUser.id);
+            }}
+            disabled={followRequestLoading.has(notification.id)}
+          >
+            {followRequestLoading.has(notification.id) ? (
+              <CircularProgress size={12} color="inherit" />
+            ) : (
+              'Decline'
+            )}
+          </button>
+        </div>
+      );
+    }
+    
+    // Follow back button for follow notifications
+    if (
+      (notification.type === 'follow' || 
+       notification.type === 'follow_back_suggestion' || 
+       notification.type === 'follow_request_accepted') && 
+      !followingUsers.has(notification.fromUser.id)
+    ) {
+      return (
+        <GradientButton
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+            e.stopPropagation();
+            onFollowBack(notification.id, notification.fromUser.id);
+          }}
+          disabled={followLoading.has(notification.fromUser.id)}
+        >
+          {followLoading.has(notification.fromUser.id) ? (
+            <CircularProgress size={12} color="inherit" />
+          ) : (
+            'Follow'
+          )}
+        </GradientButton>
+      );
+    }
+    
+    // Following indicator
+    if (notification.type === 'follow' && followingUsers.has(notification.fromUser.id)) {
+      return (
+        <button className={styles.followingButton}>
+          Following
+        </button>
+      );
+    }
+    
+    // Post thumbnail for post-related notifications
+    if (notification.post && notification.post.media && notification.post.media.length > 0) {
+      return (
+        <div className={styles.postThumbnail}>
+          <img
+            src={notification.post.media[0].url}
+            alt="Post thumbnail"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = "https://placehold.co/40x40/362a4d/ffffff?text=P";
+            }}
+          />
+        </div>
+      );
+    }
+    
+    return null;
+  };
+  
+  const formatNotificationText = () => {
+    const username = notification.fromUser.username;
+    
+    switch (notification.type) {
+      case 'follow':
+        return 'started following you.';
+      case 'follow_request':
+        return 'wants to follow you.';
+      case 'follow_request_accepted':
+        return 'accepted your follow request.';
+      case 'follow_back_suggestion':
+        return 'accepted your follow request.';
+      case 'like':
+        return 'liked your latest reel.';
+      case 'comment':
+        return 'commented: "Amazing view!" on your post.';
+      case 'mention':
+        return 'mentioned you in a comment.';
+      case 'message':
+        return `sent you a message: ${notification.message || 'New message'}`;
+      default:
+        return 'sent you a notification.';
+    }
+  };
+  
+  const formatTime = () => {
+    const date = new Date(notification.createdAt);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  
+  return (
+    <div 
+      className={`${styles.notificationItem} ${!notification.isRead ? styles.unread : ''}`}
+      onClick={() => onNotificationClick(notification)}
+    >
+      <div className={styles.notificationLeft}>
+        <ProfileAvatar 
+          size="md" 
+          src={notification.fromUser.profilePicture}
+          username={notification.fromUser.username}
+        />
+        <div className={styles.notificationContent}>
+          <span className={styles.notificationUsername}>
+            {notification.fromUser.username}
+          </span>
+          <span className={styles.notificationText}>
+            {formatNotificationText()}
+          </span>
+          <span className={styles.notificationTime}>
+            {formatTime()}
+          </span>
+        </div>
+      </div>
+      <div className={styles.notificationRight}>
+        <div className={`${styles.notificationIcon} ${notification.type === 'like' ? styles.like : notification.type === 'comment' ? styles.comment : notification.type.includes('follow') ? styles.follow : styles.default}`}>
+          {getIcon()}
+        </div>
+        {getActionElement()}
+        {!notification.isRead && <div className={styles.unreadIndicator} />}
+      </div>
+    </div>
+  );
+};
 const isToday = (date: Date) => {
   const today = new Date();
   return date.toDateString() === today.toDateString();
@@ -408,232 +690,82 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ open, onClose }
     }
   };
 
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{
-        sx: { maxHeight: '80vh' }
-      }}
-    >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">Notifications</Typography>
-        <IconButton onClick={onClose}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      
-      <DialogContent sx={{ p: 0 }}>
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : notifications.length === 0 ? (
-          <Box sx={{ textAlign: 'center', p: 4 }}>
-            <Typography variant="body2" color="text.secondary">
-              No notifications yet
-            </Typography>
-          </Box>
-        ) : (
-          <List sx={{ py: 0 }}>
-            {groupNotificationsByDate(notifications).map((group, groupIndex) => (
-              <React.Fragment key={group.label}>
-                {/* Date Header */}
-                <Box
-                  sx={{
-                    px: 2,
-                    py: 1.5,
-                    backgroundColor: 'grey.50',
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 1
-                  }}
-                >
-                  <Typography
-                    variant="subtitle2"
-                    sx={{
-                      fontWeight: 600,
-                      color: 'text.primary',
-                      textTransform: 'uppercase',
-                      letterSpacing: 0.5,
-                      fontSize: '0.75rem'
-                    }}
-                  >
-                    {group.label}
-                  </Typography>
-                </Box>
-                
-                {/* Notifications for this date */}
-                {group.notifications.map((notification, index) => {
-                  // Skip notifications with missing fromUser data
-                  if (!notification.fromUser || !notification.fromUser.username) {
-                    console.warn('Skipping notification with missing fromUser:', notification);
-                    return null;
-                  }
-                  
-                  return (
-                  <React.Fragment key={notification.id}>
-                <ListItem
-                  sx={{
-                    backgroundColor: notification.isRead ? 'transparent' : 'action.hover',
-                    cursor: notification.type === 'follow_request' ? 'default' : 'pointer',
-                    color: '#000000', // Always black text
-                    '&:hover': {
-                      backgroundColor: notification.isRead ? 'action.hover' : 'action.selected'
-                    }
-                  }}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <ListItemAvatar>
-                    <Avatar
-                      src={notification.fromUser.profilePicture}
-                      alt={notification.fromUser.username}
-                      sx={{ width: 44, height: 44 }}
-                    >
-                      {notification.fromUser.username[0].toUpperCase()}
-                    </Avatar>
-                  </ListItemAvatar>
-                  
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" sx={{ color: '#000000' }}>
-                          {formatNotificationText(notification)}
-                        </Typography>
-                        {!notification.isRead && (
-                          <Box
-                            sx={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              backgroundColor: 'primary.main',
-                            }}
-                          />
-                        )}
-                      </Box>
-                    }
-                    secondary={
-                      <Typography variant="caption" color="text.secondary">
-                        {new Date(notification.createdAt).toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </Typography>
-                    }
-                  />
+  // Don't render if not open
+  if (!open) return null;
 
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {/* Show post thumbnail for post-related notifications */}
-                    {notification.post && notification.post.media && notification.post.media.length > 0 && (
-                      <Avatar
-                        src={notification.post.media[0].url}
-                        variant="rounded"
-                        sx={{ width: 44, height: 44 }}
+  return (
+    <div className={styles.notificationModal}>
+      {/* Background Overlay */}
+      <div className={styles.backgroundOverlay} onClick={onClose}></div>
+
+      {/* Notification Panel */}
+      <div className={styles.notificationPanel}>
+        {/* Header */}
+        <div className={styles.notificationHeader}>
+          <h2 className={styles.notificationTitle}>Notifications</h2>
+          <button onClick={onClose} className={styles.closeButton}>
+            <CloseIcon sx={{ fontSize: 24 }} />
+          </button>
+        </div>
+
+        {/* Notification List */}
+        <div className={styles.notificationList}>
+          {loading ? (
+            <div className={styles.loadingContainer}>
+              <CircularProgress className={styles.loadingSpinner} />
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Typography variant="body2">
+                No notifications yet
+              </Typography>
+            </div>
+          ) : (
+            <>
+              <div className={styles.notificationSection}>
+                <h3 className={styles.sectionTitle}>Today</h3>
+                {groupNotificationsByDate(notifications)[0]?.notifications
+                  ?.filter(n => n.fromUser && n.fromUser.username)
+                  ?.map(notification => (
+                    <NotificationItem 
+                      key={notification.id}
+                      notification={notification}
+                      onNotificationClick={handleNotificationClick}
+                      onFollowBack={handleFollowBack}
+                      onFollowRequestAction={handleFollowRequestAction}
+                      followLoading={followLoading}
+                      followRequestLoading={followRequestLoading}
+                      followingUsers={followingUsers}
+                    />
+                  ))
+                }
+              </div>
+              
+              {groupNotificationsByDate(notifications).slice(1).map((group, index) => (
+                <div key={group.label} className={styles.notificationSection}>
+                  <h3 className={styles.sectionTitle}>{group.label}</h3>
+                  {group.notifications
+                    ?.filter(n => n.fromUser && n.fromUser.username)
+                    ?.map(notification => (
+                      <NotificationItem 
+                        key={notification.id}
+                        notification={notification}
+                        onNotificationClick={handleNotificationClick}
+                        onFollowBack={handleFollowBack}
+                        onFollowRequestAction={handleFollowRequestAction}
+                        followLoading={followLoading}
+                        followRequestLoading={followRequestLoading}
+                        followingUsers={followingUsers}
                       />
-                    )}
-                    
-                    {/* Show follow-back button for follow notifications only if not already following */}
-                    {(notification.type === 'follow' || notification.type === 'follow_back_suggestion' || notification.type === 'follow_request_accepted') && !followingUsers.has(notification.fromUser.id) && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFollowBack(notification.id, notification.fromUser.id);
-                        }}
-                        disabled={followLoading.has(notification.fromUser.id)}
-                      >
-                        {followLoading.has(notification.fromUser.id) ? (
-                          <CircularProgress size={16} />
-                        ) : (
-                          'Follow Back'
-                        )}
-                      </Button>
-                    )}
-                    
-                    {/* Show approve/decline buttons for follow request notifications */}
-                    {notification.type === 'follow_request' && (
-                      <>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFollowRequestAction(notification.id, 'approve', notification.fromUser.id);
-                          }}
-                          disabled={followRequestLoading.has(notification.id)}
-                          sx={{ minWidth: 70 }}
-                        >
-                          {followRequestLoading.has(notification.id) ? (
-                            <CircularProgress size={16} />
-                          ) : (
-                            'Approve'
-                          )}
-                        </Button>
-                        
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFollowRequestAction(notification.id, 'decline', notification.fromUser.id);
-                          }}
-                          disabled={followRequestLoading.has(notification.id)}
-                          sx={{ minWidth: 70 }}
-                        >
-                          {followRequestLoading.has(notification.id) ? (
-                            <CircularProgress size={16} />
-                          ) : (
-                            'Decline'
-                          )}
-                        </Button>
-                      </>
-                    )}
-                    
-                    {/* Show "Following" indicator for users already being followed */}
-                    {notification.type === 'follow' && followingUsers.has(notification.fromUser.id) && (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ 
-                          px: 1.5, 
-                          py: 0.5,
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          borderRadius: 1,
-                          fontSize: '0.75rem'
-                        }}
-                      >
-                        Following
-                      </Typography>
-                    )}
-                    
-                    {/* Notification type icon */}
-                    <Box sx={{ ml: 1 }}>
-                      {getNotificationIcon(notification.type)}
-                    </Box>
-                  </Box>
-                </ListItem>
-                
-                {index < group.notifications.length - 1 && <Divider />}
-              </React.Fragment>
-            );}
-            )}
-                
-                {/* Divider between date groups */}
-                {groupIndex < groupNotificationsByDate(notifications).length - 1 && (
-                  <Divider sx={{ my: 2, borderColor: 'primary.main', borderWidth: 1 }} />
-                )}
-              </React.Fragment>
-            ))}
-          </List>
-        )}
-      </DialogContent>
-    </Dialog>
+                    ))
+                  }
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

@@ -38,10 +38,10 @@ import NotificationsModal from './NotificationsModal';
 import SearchModal from './SearchModal';
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
-  backgroundColor: 'white',
-  color: 'black',
-  borderBottom: `1px solid ${theme.palette.divider}`,
-  boxShadow: 'none',
+  background: 'rgba(13, 1, 26, 0.95)',
+  backdropFilter: 'blur(10px)',
+  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
   [theme.breakpoints.down('md')]: {
     display: 'none', // Hide on mobile, use bottom navigation instead
   },
@@ -53,17 +53,35 @@ const MobileBottomNav = styled(BottomNavigation)(({ theme }) => ({
   left: 0,
   right: 0,
   zIndex: 1000,
-  borderTop: `1px solid ${theme.palette.divider}`,
-  height: '60px',
+  background: 'rgba(13, 1, 26, 0.95)',
+  backdropFilter: 'blur(10px)',
+  borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+  height: '70px',
+  boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.3)',
   '& .MuiBottomNavigationAction-root': {
     minWidth: 'auto',
-    padding: '6px 4px',
+    padding: '8px 4px',
     fontSize: '0.65rem',
+    color: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: '12px',
+    margin: '0 4px',
+    transition: 'all 0.3s ease',
     '& .MuiBottomNavigationAction-label': {
       fontSize: '0.6rem',
+      fontWeight: 500,
       '&.Mui-selected': {
         fontSize: '0.65rem',
+        fontWeight: 600,
       },
+    },
+    '&.Mui-selected': {
+      color: '#FFFFFF',
+      background: 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)',
+      boxShadow: '0 4px 15px rgba(168, 85, 247, 0.3)',
+    },
+    '&:hover:not(.Mui-selected)': {
+      color: 'rgba(255, 255, 255, 0.8)',
+      backgroundColor: 'rgba(168, 85, 247, 0.1)',
     },
   },
   [theme.breakpoints.up('md')]: {
@@ -96,16 +114,39 @@ const NavContainer = styled(Container)(({ theme }) => ({
 }));
 
 const Logo = styled('div')({
-  fontFamily: 'Billabong, cursive',
-  fontSize: '2rem',
-  fontWeight: 'bold',
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '2.5rem',
+  fontWeight: '800',
+  background: 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
   cursor: 'pointer',
+  letterSpacing: '0.05em',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    transform: 'scale(1.05)',
+  },
 });
 
 const NavIcons = styled('div')({
   display: 'flex',
   alignItems: 'center',
   gap: '16px',
+  '& .MuiIconButton-root': {
+    borderRadius: '12px',
+    padding: '10px',
+    transition: 'all 0.3s ease',
+    '&:hover': {
+      backgroundColor: 'rgba(168, 85, 247, 0.1)',
+      transform: 'translateY(-2px)',
+    },
+    '&.active': {
+      background: 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)',
+      color: '#FFFFFF',
+      boxShadow: '0 4px 15px rgba(168, 85, 247, 0.3)',
+    },
+  },
 });
 
 interface LayoutProps {
@@ -242,7 +283,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <NavIcons>
               <IconButton
                 onClick={() => handleNavigation('/')}
-                color={isActive('/') ? 'primary' : 'default'}
+                className={isActive('/') ? 'active' : ''}
+                sx={{ color: isActive('/') ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)' }}
               >
                 <HomeIcon />
               </IconButton>
@@ -257,21 +299,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     setSearchOpen(true);
                   }
                 }}
-                color={isActive('/search') || searchOpen ? 'primary' : 'default'}
+                className={isActive('/search') || searchOpen ? 'active' : ''}
+                sx={{ color: (isActive('/search') || searchOpen) ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)' }}
               >
                 <SearchIcon />
               </IconButton>
               
               <IconButton
                 onClick={() => handleNavigation('/feed')}
-                color={isActive('/feed') ? 'primary' : 'default'}
+                className={isActive('/feed') ? 'active' : ''}
+                sx={{ color: isActive('/feed') ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)' }}
               >
                 <ExploreIcon />
               </IconButton>
               
               <IconButton
                 onClick={() => handleNavigation('/messages')}
-                color={isActive('/messages') ? 'primary' : 'default'}
+                className={isActive('/messages') ? 'active' : ''}
+                sx={{ color: isActive('/messages') ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)' }}
               >
                 <Badge badgeContent={unreadMessagesCount} color="error">
                   <MessageIcon />
@@ -280,6 +325,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               
               <IconButton
                 onClick={handleNotificationsClick}
+                sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
               >
                 <Badge badgeContent={unreadCount} color="error">
                   <HeartIcon />

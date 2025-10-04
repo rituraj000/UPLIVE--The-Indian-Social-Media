@@ -305,15 +305,16 @@ const PostFeed: React.FC = () => {
           textAlign: 'center',
           py: 8,
           px: 4,
-          backgroundColor: '#ffffff',
-          borderRadius: { xs: 0, sm: 2 },
-          border: { xs: 'none', sm: '1px solid #e0e0e0' },
-          mx: { xs: 0, sm: 1 }
+          backgroundColor: 'rgba(31, 31, 53, 0.6)',
+          borderRadius: 3,
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          mx: { xs: 0, sm: 1 },
+          backdropFilter: 'blur(10px)'
         }}>
-          <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+          <Typography variant="h6" sx={{ mb: 1, color: '#FFFFFF' }}>
             No posts available
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
             Be the first to create a post!
           </Typography>
         </Box>
@@ -322,7 +323,7 @@ const PostFeed: React.FC = () => {
           display: 'flex', 
           flexDirection: 'column',
           width: '100%',
-          gap: { xs: 0, sm: 1 }
+          gap: 4
         }}>
           {posts.map((post) => (
             <Post

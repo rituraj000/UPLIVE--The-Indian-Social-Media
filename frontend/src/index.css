@@ -1,13 +1,14 @@
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* White background */
-  background: #ffffff;
+  /* Dark background with deep purple hint */
+  background: #0d011a;
   min-height: 100vh;
+  color: #FFFFFF;
 }
 
 code {
@@ -15,13 +16,30 @@ code {
     monospace;
 }
 
-/* Ensure root element also has white background */
+/* Ensure root element also has dark background */
 #root {
-  background: #ffffff;
+  background: #0d011a;
   min-height: 100vh;
 }
 
 /* Global background for all elements */
 html {
-  background: #ffffff;
+  background: #0d011a;
+}
+
+/* Story animation for unseen stories */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1.1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }

@@ -110,18 +110,56 @@ const UserSuggestions: React.FC = () => {
 
   if (loading) {
     return (
-      <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 3, 
+          bgcolor: '#1F1F35',
+          borderRadius: 3,
+          boxShadow: '0 8px 32px rgba(168, 85, 247, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}
+      >
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            mb: 3, 
+            fontWeight: 700, 
+            color: '#FFFFFF',
+            fontSize: '1.2rem'
+          }}
+        >
           Suggestions for You
         </Typography>
         {[1, 2, 3].map((item) => (
-          <Box key={item} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Skeleton variant="circular" width={40} height={40} />
+          <Box key={item} sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Skeleton 
+              variant="circular" 
+              width={48} 
+              height={48} 
+              sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }}
+            />
             <Box sx={{ ml: 2, flex: 1 }}>
-              <Skeleton variant="text" width="60%" />
-              <Skeleton variant="text" width="40%" />
+              <Skeleton 
+                variant="text" 
+                width="60%" 
+                sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }}
+              />
+              <Skeleton 
+                variant="text" 
+                width="40%" 
+                sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }}
+              />
             </Box>
-            <Skeleton variant="rectangular" width={60} height={30} />
+            <Skeleton 
+              variant="rectangular" 
+              width={68} 
+              height={32} 
+              sx={{ 
+                bgcolor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 2
+              }}
+            />
           </Box>
         ))}
       </Paper>
@@ -130,22 +168,69 @@ const UserSuggestions: React.FC = () => {
 
   if (error) {
     return (
-      <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 3, 
+          bgcolor: '#1F1F35',
+          borderRadius: 3,
+          boxShadow: '0 8px 32px rgba(168, 85, 247, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}
+      >
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            mb: 3, 
+            fontWeight: 700, 
+            color: '#FFFFFF',
+            fontSize: '1.2rem'
+          }}
+        >
           Suggestions for You
         </Typography>
-        <Alert severity="info" variant="outlined">{error}</Alert>
+        <Alert 
+          severity="info" 
+          variant="outlined"
+          sx={{
+            bgcolor: 'rgba(168, 85, 247, 0.1)',
+            borderColor: 'rgba(168, 85, 247, 0.3)',
+            color: '#FFFFFF',
+            '& .MuiAlert-icon': {
+              color: '#A855F7'
+            }
+          }}
+        >
+          {error}
+        </Alert>
       </Paper>
     );
   }
 
   if (suggestions.length === 0) {
     return (
-      <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 3, 
+          bgcolor: '#1F1F35',
+          borderRadius: 3,
+          boxShadow: '0 8px 32px rgba(168, 85, 247, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}
+      >
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            mb: 3, 
+            fontWeight: 700, 
+            color: '#FFFFFF',
+            fontSize: '1.2rem'
+          }}
+        >
           Suggestions for You
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
           No new suggestions at the moment. Check back later!
         </Typography>
       </Paper>
@@ -153,9 +238,25 @@ const UserSuggestions: React.FC = () => {
   }
 
   return (
-    <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        p: 3, 
+        bgcolor: '#1F1F35',
+        borderRadius: 3,
+        boxShadow: '0 8px 32px rgba(168, 85, 247, 0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
+      }}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            fontWeight: 700, 
+            color: '#FFFFFF',
+            fontSize: '1.2rem'
+          }}
+        >
           Suggestions for You
         </Typography>
         <Button 
@@ -164,9 +265,11 @@ const UserSuggestions: React.FC = () => {
           sx={{ 
             textTransform: 'none', 
             fontWeight: 600,
-            color: 'primary.main',
+            color: '#A855F7',
+            fontSize: '0.9rem',
             '&:hover': {
-              bgcolor: 'transparent'
+              bgcolor: 'rgba(168, 85, 247, 0.1)',
+              color: '#EC4899'
             }
           }}
         >
@@ -180,53 +283,83 @@ const UserSuggestions: React.FC = () => {
           sx={{ 
             display: 'flex', 
             alignItems: 'center', 
-            mb: 2,
-            '&:last-child': { mb: 0 }
+            mb: 3,
+            '&:last-child': { mb: 0 },
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 2
+            },
+            transition: 'background-color 0.2s ease-in-out',
+            p: 1,
+            mx: -1
           }}
         >
-          <Avatar
-            src={user.profilePicture}
-            alt={user.fullName}
-            sx={{ 
-              width: 40, 
-              height: 40,
+          <Box
+            sx={{
+              position: 'relative',
               cursor: 'pointer',
-              border: hasProfilePicture(user) ? '2px solid #1976d2' : 'none',
-              '&:hover': {
-                opacity: 0.8,
+              '&:hover .avatar': {
                 transform: 'scale(1.05)'
-              },
-              transition: 'all 0.2s ease-in-out'
+              }
             }}
             onClick={() => handleUserClick(user.username)}
           >
-            {user.fullName?.charAt(0)?.toUpperCase() || user.username?.charAt(0)?.toUpperCase()}
-          </Avatar>
+            <Avatar
+              src={user.profilePicture}
+              alt={user.fullName}
+              className="avatar"
+              sx={{ 
+                width: 48, 
+                height: 48,
+                background: hasProfilePicture(user) 
+                  ? 'none' 
+                  : 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)',
+                color: '#FFFFFF',
+                fontWeight: 700,
+                fontSize: '1.1rem',
+                transition: 'transform 0.2s ease-in-out',
+                border: hasProfilePicture(user) 
+                  ? '2px solid transparent'
+                  : 'none',
+                backgroundImage: hasProfilePicture(user) 
+                  ? 'linear-gradient(#1F1F35, #1F1F35), linear-gradient(135deg, #A855F7 0%, #EC4899 100%)'
+                  : 'none',
+                backgroundOrigin: 'border-box',
+                backgroundClip: 'content-box, border-box'
+              }}
+            >
+              {user.fullName?.charAt(0)?.toUpperCase() || user.username?.charAt(0)?.toUpperCase()}
+            </Avatar>
+          </Box>
           
           <Box sx={{ ml: 2, flex: 1, minWidth: 0 }}>
             <Typography 
-              variant="body2" 
+              variant="body1" 
               sx={{ 
                 fontWeight: 600,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 cursor: 'pointer',
+                color: '#FFFFFF',
+                fontSize: '0.95rem',
                 '&:hover': {
-                  textDecoration: 'underline'
-                }
+                  color: '#A855F7'
+                },
+                transition: 'color 0.2s ease-in-out'
               }}
               onClick={() => handleUserClick(user.username)}
             >
               {user.username}
             </Typography>
             <Typography 
-              variant="caption" 
-              color="text.secondary"
+              variant="body2" 
               sx={{ 
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
-                textOverflow: 'ellipsis'
+                textOverflow: 'ellipsis',
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.85rem'
               }}
             >
               {user.fullName}
@@ -234,8 +367,11 @@ const UserSuggestions: React.FC = () => {
             {user.followerCount > 0 && (
               <Typography 
                 variant="caption" 
-                color="text.secondary"
-                sx={{ display: 'block' }}
+                sx={{ 
+                  display: 'block',
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  fontSize: '0.75rem'
+                }}
               >
                 {user.followerCount} {user.followerCount === 1 ? 'follower' : 'followers'}
               </Typography>
@@ -250,12 +386,27 @@ const UserSuggestions: React.FC = () => {
             sx={{
               textTransform: 'none',
               fontWeight: 600,
-              color: followingUsers.has(user.id) ? 'text.secondary' : 'primary.main',
+              color: followingUsers.has(user.id) ? 'rgba(255, 255, 255, 0.5)' : '#FFFFFF',
               minWidth: 'auto',
-              px: 1,
+              px: 2,
+              py: 0.5,
+              fontSize: '0.85rem',
+              background: followingUsers.has(user.id) 
+                ? 'rgba(255, 255, 255, 0.1)' 
+                : 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)',
+              borderRadius: 2,
               '&:hover': {
-                bgcolor: 'action.hover'
-              }
+                background: followingUsers.has(user.id)
+                  ? 'rgba(255, 255, 255, 0.15)'
+                  : 'linear-gradient(135deg, #9333EA 0%, #DB2777 100%)',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(168, 85, 247, 0.3)'
+              },
+              '&:disabled': {
+                color: 'rgba(255, 255, 255, 0.5)',
+                background: 'rgba(255, 255, 255, 0.1)'
+              },
+              transition: 'all 0.2s ease-in-out'
             }}
           >
             {followingUsers.has(user.id) ? 'Following' : 'Follow'}

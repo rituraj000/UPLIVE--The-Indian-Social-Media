@@ -18,7 +18,8 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Paper
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -29,6 +30,8 @@ import {
   MoreVert as MoreVertIcon,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
+import EnhancedAvatar from './EnhancedAvatar';
+import GradientButton from './GradientButton';
 import { useAuth } from '../context/AuthContext';
 import { storiesApi } from '../services/api';
 import { Story, User } from '../types';
@@ -100,6 +103,15 @@ const StoriesBar: React.FC = () => {
       // Mark first story as viewed if it exists
       if (response.data.stories.length > 0) {
         await storiesApi.markStoryViewed(response.data.stories[0].id);
+        
+        // Update the story group state to remove the unseen indicator
+        setStoryGroups(prevGroups => 
+          prevGroups.map(group => 
+            group.user.id === storyGroup.user.id 
+              ? { ...group, hasUnseenStories: false }
+              : group
+          )
+        );
       }
     } catch (error: any) {
       console.error('Failed to fetch user stories:', error);
@@ -263,7 +275,14 @@ const StoriesBar: React.FC = () => {
   };
 
   return (
-    <Box sx={{ mb: 3 }}>
+    <Paper elevation={0} sx={{ 
+      mb: 3, 
+      borderRadius: '20px',
+      background: 'rgba(31, 31, 53, 0.8)',
+      backdropFilter: 'blur(10px)',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      overflow: 'hidden'
+    }}>
       {/* Stories Container */}
       <Box sx={{ 
         display: 'flex', 
@@ -271,11 +290,14 @@ const StoriesBar: React.FC = () => {
         overflowX: 'auto', 
         pb: 1,
         px: 2,
-        '&::-webkit-scrollbar': { display: 'none' },
-        backgroundColor: 'white',
-        borderRadius: 1,
-        border: '1px solid',
-        borderColor: 'grey.200'
+        py: 2,
+        '&::-webkit-scrollbar': { 
+          display: 'none',
+          height: 0,
+          background: 'transparent'
+        },
+        msOverflowStyle: 'none',
+        scrollbarWidth: 'none'
       }}>
         {/* User's own story / Add story */}
         <Box sx={{ 
@@ -283,17 +305,20 @@ const StoriesBar: React.FC = () => {
           flexDirection: 'column', 
           alignItems: 'center', 
           minWidth: 80,
-          py: 2
+          py: 1,
+          cursor: 'pointer',
+          borderRadius: '12px',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+            transform: 'translateY(-2px)'
+          }
         }}>
-          <Box sx={{ position: 'relative' }}>
-            <Avatar
+          <Box sx={{ position: 'relative', mb: 1 }}>
+            <EnhancedAvatar
               src={user?.profilePicture}
-              sx={{ 
-                width: 60, 
-                height: 60, 
-                mb: 1,
-                cursor: 'pointer'
-              }}
+              size={56}
+              hasStory={storyGroups.some(sg => sg.user.id === user?.id && sg.stories.length > 0)}
               onClick={() => {
                 // If user has stories, view them; otherwise navigate to profile
                 const userStoryGroup = storyGroups.find(sg => sg.user.id === user?.id);
@@ -342,31 +367,66 @@ const StoriesBar: React.FC = () => {
                 flexDirection: 'column', 
                 alignItems: 'center',
                 minWidth: 80,
-                py: 2,
-                cursor: 'pointer'
+                py: 1,
+                cursor: 'pointer',
+                borderRadius: '12px',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                  transform: 'translateY(-2px)'
+                }
               }}
               onClick={() => handleViewStory(storyGroup)}
             >
-              <Avatar
-                src={storyGroup.user?.profilePicture || ''}
-                sx={{ 
-                  width: 60, 
-                  height: 60, 
-                  mb: 1,
-                  border: storyGroup.hasUnseenStories ? '3px solid' : '2px solid',
-                  borderColor: storyGroup.hasUnseenStories 
-                    ? 'primary.main' 
-                    : 'grey.300',
-                  background: storyGroup.hasUnseenStories 
-                    ? `linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)` 
-                    : 'transparent'
-                }}
-              />
+              <Box sx={{ 
+                width: 50, 
+                height: 50, 
+                borderRadius: '50%',
+                padding: storyGroup.hasUnseenStories ? '3px' : '2px',
+                background: storyGroup.hasUnseenStories 
+                  ? 'linear-gradient(135deg, #A855F7 0%, #EC4899 50%, #F59E0B 100%)' 
+                  : 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 1,
+                position: 'relative',
+                '&::before': storyGroup.hasUnseenStories ? {
+                  content: '""',
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #A855F7 0%, #EC4899 50%, #F59E0B 100%)',
+                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                  opacity: 0.3,
+                  zIndex: -1,
+                  transform: 'scale(1.1)'
+                } : {}
+              }}>
+                <Avatar
+                  src={storyGroup.user?.profilePicture || ''}
+                  sx={{ 
+                    width: storyGroup.hasUnseenStories ? 44 : 46, 
+                    height: storyGroup.hasUnseenStories ? 44 : 46,
+                    border: storyGroup.hasUnseenStories 
+                      ? '2px solid #1F1F35' 
+                      : '1px solid rgba(255, 255, 255, 0.1)',
+                    opacity: storyGroup.hasUnseenStories ? 1 : 0.7,
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+              </Box>
               <Typography 
                 variant="caption" 
                 sx={{ 
                   textAlign: 'center',
-                  fontWeight: storyGroup.hasUnseenStories ? 'bold' : 'normal'
+                  fontWeight: storyGroup.hasUnseenStories ? 600 : 400,
+                  fontSize: '0.75rem',
+                  color: storyGroup.hasUnseenStories ? '#FFFFFF' : 'rgba(255, 255, 255, 0.8)',
+                  maxWidth: '70px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 {storyGroup.user?.username || 'Unknown'}
@@ -832,7 +892,7 @@ const StoriesBar: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Paper>
   );
 };
 

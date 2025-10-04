@@ -41,19 +41,44 @@ const Loading = () => (
   </Box>
 );
 
-// Create theme
+// Create theme - Modern Dark Theme with Gradients
 const theme = createTheme({
   palette: {
-    mode: 'light',
+    mode: 'dark',
     primary: {
-      main: '#E4405F',
+      main: '#A855F7', // Purple
+      light: '#C084FC',
+      dark: '#7C3AED',
+    },
+    secondary: {
+      main: '#EC4899', // Pink
+      light: '#F472B6',
+      dark: '#DB2777',
     },
     background: {
-      default: '#ffffff', // White background
+      default: '#0d011a', // Almost black with deep purple hint
+      paper: '#1F1F35', // Dark gray-purple
+    },
+    text: {
+      primary: '#FFFFFF',
+      secondary: '#A1A1AA',
+    },
+    error: {
+      main: '#EF4444',
+    },
+    warning: {
+      main: '#F59E0B',
+    },
+    success: {
+      main: '#10B981',
+    },
+    info: {
+      main: '#3B82F6',
     },
   },
   typography: {
     fontFamily: [
+      'Inter',
       '-apple-system',
       'BlinkMacSystemFont',
       'Segoe UI',
@@ -63,13 +88,98 @@ const theme = createTheme({
       'Cantarell',
       'sans-serif',
     ].join(','),
+    h1: {
+      fontWeight: 800,
+      background: 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+    },
+    h2: {
+      fontWeight: 700,
+      color: '#FFFFFF',
+    },
+    h3: {
+      fontWeight: 600,
+      color: '#FFFFFF',
+    },
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          background: 'linear-gradient(135deg, #0F0F23 0%, #1F1F35 100%)',
+          minHeight: '100vh',
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 8,
+          borderRadius: 12,
+          fontWeight: 600,
+          padding: '10px 20px',
+        },
+        contained: {
+          background: 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)',
+          boxShadow: '0 4px 20px rgba(168, 85, 247, 0.3)',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #9333EA 0%, #DB2777 100%)',
+            boxShadow: '0 6px 25px rgba(168, 85, 247, 0.4)',
+            transform: 'translateY(-2px)',
+          },
+          '&:active': {
+            transform: 'translateY(0)',
+          },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#1F1F35',
+          borderRadius: 16,
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#1F1F35',
+          borderRadius: 20,
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 12,
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            '& fieldset': {
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+            },
+            '&:hover fieldset': {
+              borderColor: 'rgba(168, 85, 247, 0.5)',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: '#A855F7',
+            },
+          },
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          '&:hover': {
+            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+          },
         },
       },
     },

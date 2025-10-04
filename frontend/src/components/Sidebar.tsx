@@ -8,24 +8,47 @@ const Sidebar: React.FC = () => {
       <UserSuggestions />
       
       {/* Footer Links */}
-      <Paper elevation={0} sx={{ p: 2, mt: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 3, 
+          mt: 3, 
+          bgcolor: '#1F1F35',
+          borderRadius: 3,
+          boxShadow: '0 8px 32px rgba(168, 85, 247, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}
+      >
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
           {['About', 'Help', 'Press', 'API', 'Jobs', 'Privacy', 'Terms'].map((item) => (
             <Link
               key={item}
               href="#"
-              variant="caption"
-              color="text.secondary"
+              variant="body2"
               sx={{ 
                 textDecoration: 'none',
-                '&:hover': { textDecoration: 'underline' }
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.8rem',
+                fontWeight: 500,
+                '&:hover': { 
+                  textDecoration: 'underline',
+                  color: '#A855F7'
+                },
+                transition: 'color 0.2s ease-in-out'
               }}
             >
               {item}
             </Link>
           ))}
         </Box>
-        <Typography variant="caption" color="text.secondary">
+        <Typography 
+          variant="caption" 
+          sx={{
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontSize: '0.75rem',
+            fontWeight: 500
+          }}
+        >
           © 2025 UPLIVE - The Indian Social Media
         </Typography>
       </Paper>
