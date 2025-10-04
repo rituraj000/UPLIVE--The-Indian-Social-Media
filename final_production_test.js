@@ -1,20 +1,20 @@
 // Final verification test for production registration
-const https = require('https');
+const https = require("https");
 
 const testScenarios = [
   {
     name: "Empty Registration (Validation Test)",
     data: {},
     expectedStatus: 400,
-    expectFast: true
+    expectFast: true,
   },
   {
     name: "Incomplete Registration (Missing Fields)",
     data: {
-      phoneNumber: "+919876543210"
+      phoneNumber: "+919876543210",
     },
     expectedStatus: 400,
-    expectFast: true
+    expectFast: true,
   },
   {
     name: "Invalid Phone Format",
@@ -22,10 +22,10 @@ const testScenarios = [
       phoneNumber: "9876543210", // Missing country code
       username: "testuser123",
       fullName: "Test User",
-      password: "testpass123"
+      password: "testpass123",
     },
     expectedStatus: 400,
-    expectFast: true
+    expectFast: true,
   },
   {
     name: "Valid Phone Registration (SMS Test)",
@@ -33,10 +33,10 @@ const testScenarios = [
       phoneNumber: "+919876543210",
       username: "testuser" + Date.now(),
       fullName: "Test User",
-      password: "testpass123"
+      password: "testpass123",
     },
     expectedStatus: [201, 500], // Could succeed or fail on SMS
-    expectFast: false // SMS can take time
+    expectFast: false, // SMS can take time
   },
   {
     name: "Email Registration Alternative",
@@ -44,56 +44,64 @@ const testScenarios = [
       email: "test" + Date.now() + "@example.com",
       username: "emailuser" + Date.now(),
       fullName: "Email Test User",
-      password: "testpass123"
+      password: "testpass123",
     },
     expectedStatus: [201, 500], // Could succeed or fail on email
-    expectFast: false
-  }
+    expectFast: false,
+  },
 ];
 
 async function testScenario(scenario) {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
     const postData = JSON.stringify(scenario.data);
-    
+
     const options = {
-      hostname: 'uplive-the-indian-social-media.onrender.com',
+      hostname: "uplive-the-indian-social-media.onrender.com",
       port: 443,
-      path: '/api/auth/register',
-      method: 'POST',
+      path: "/api/auth/register",
+      method: "POST",
       headers: {
-        'Origin': 'https://uplive-the-indian-social-media.vercel.app',
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData)
+        Origin: "https://uplive-the-indian-social-media.vercel.app",
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(postData),
       },
-      timeout: 15000 // 15 second timeout
+      timeout: 15000, // 15 second timeout
     };
 
     console.log(`\n🧪 Testing: ${scenario.name}`);
     console.log(`📤 Data: ${JSON.stringify(scenario.data, null, 2)}`);
-    
+
     const req = https.request(options, (res) => {
       const responseTime = Date.now() - startTime;
-      
-      let responseData = '';
-      res.on('data', (chunk) => {
+
+      let responseData = "";
+      res.on("data", (chunk) => {
         responseData += chunk;
       });
-      
-      res.on('end', () => {
+
+      res.on("end", () => {
         const result = {
           scenario: scenario.name,
           status: res.statusCode,
           time: responseTime,
           data: responseData,
-          success: Array.isArray(scenario.expectedStatus) 
+          success: Array.isArray(scenario.expectedStatus)
             ? scenario.expectedStatus.includes(res.statusCode)
-            : res.statusCode === scenario.expectedStatus
+            : res.statusCode === scenario.expectedStatus,
         };
-        
-        console.log(`📊 Status: ${res.statusCode} (${result.success ? '✅ Expected' : '❌ Unexpected'})`);
-        console.log(`⏱️  Time: ${responseTime}ms (${scenario.expectFast ? 'Expected Fast' : 'SMS/Email Processing'})`);
-        
+
+        console.log(
+          `📊 Status: ${res.statusCode} (${
+            result.success ? "✅ Expected" : "❌ Unexpected"
+          })`
+        );
+        console.log(
+          `⏱️  Time: ${responseTime}ms (${
+            scenario.expectFast ? "Expected Fast" : "SMS/Email Processing"
+          })`
+        );
+
         try {
           const parsedData = JSON.parse(responseData);
           console.log(`📝 Message: ${parsedData.message}`);
@@ -103,7 +111,7 @@ async function testScenario(scenario) {
         } catch (e) {
           console.log(`📝 Raw Response: ${responseData.substring(0, 200)}...`);
         }
-        
+
         // Check performance expectations
         if (scenario.expectFast && responseTime > 3000) {
           console.log(`⚠️  Slower than expected (${responseTime}ms > 3000ms)`);
@@ -112,29 +120,29 @@ async function testScenario(scenario) {
         } else {
           console.log(`✅ Performance acceptable`);
         }
-        
+
         resolve(result);
       });
     });
 
-    req.on('timeout', () => {
+    req.on("timeout", () => {
       console.log(`⏰ TIMEOUT after 15 seconds`);
       req.abort();
       resolve({
         scenario: scenario.name,
-        status: 'TIMEOUT',
+        status: "TIMEOUT",
         time: 15000,
-        success: false
+        success: false,
       });
     });
 
-    req.on('error', (error) => {
+    req.on("error", (error) => {
       console.log(`❌ ERROR: ${error.message}`);
       resolve({
         scenario: scenario.name,
-        status: 'ERROR',
+        status: "ERROR",
         error: error.message,
-        success: false
+        success: false,
       });
     });
 
@@ -144,59 +152,73 @@ async function testScenario(scenario) {
 }
 
 async function runProductionVerification() {
-  console.log('🎯 FINAL PRODUCTION VERIFICATION');
-  console.log('================================');
-  console.log('Testing registration scenarios that users will encounter...\n');
-  
+  console.log("🎯 FINAL PRODUCTION VERIFICATION");
+  console.log("================================");
+  console.log("Testing registration scenarios that users will encounter...\n");
+
   const results = [];
-  
+
   for (const scenario of testScenarios) {
     const result = await testScenario(scenario);
     results.push(result);
-    
+
     // Small delay between tests
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  
-  console.log('\n🏁 VERIFICATION COMPLETE');
-  console.log('========================');
-  
-  const successful = results.filter(r => r.success).length;
+
+  console.log("\n🏁 VERIFICATION COMPLETE");
+  console.log("========================");
+
+  const successful = results.filter((r) => r.success).length;
   const total = results.length;
-  
+
   console.log(`\n📊 Results: ${successful}/${total} scenarios passed`);
-  
-  console.log('\n📋 Summary:');
-  results.forEach(result => {
-    const status = result.success ? '✅' : '❌';
-    const timeInfo = result.time ? ` (${result.time}ms)` : '';
+
+  console.log("\n📋 Summary:");
+  results.forEach((result) => {
+    const status = result.success ? "✅" : "❌";
+    const timeInfo = result.time ? ` (${result.time}ms)` : "";
     console.log(`${status} ${result.scenario}${timeInfo}`);
   });
-  
-  console.log('\n💡 User Experience Analysis:');
-  
-  const fastValidation = results.filter(r => r.scenario.includes('Validation') || r.scenario.includes('Incomplete')).every(r => r.success);
+
+  console.log("\n💡 User Experience Analysis:");
+
+  const fastValidation = results
+    .filter(
+      (r) =>
+        r.scenario.includes("Validation") || r.scenario.includes("Incomplete")
+    )
+    .every((r) => r.success);
   if (fastValidation) {
-    console.log('✅ Form validation is working fast and correctly');
+    console.log("✅ Form validation is working fast and correctly");
   } else {
-    console.log('❌ Form validation has issues');
+    console.log("❌ Form validation has issues");
   }
-  
-  const hasWorkingRegistration = results.some(r => (r.scenario.includes('Phone') || r.scenario.includes('Email')) && r.status === 201);
+
+  const hasWorkingRegistration = results.some(
+    (r) =>
+      (r.scenario.includes("Phone") || r.scenario.includes("Email")) &&
+      r.status === 201
+  );
   if (hasWorkingRegistration) {
-    console.log('✅ At least one registration method is working');
+    console.log("✅ At least one registration method is working");
   } else {
-    console.log('⚠️  Registration methods showing errors (expected for SMS, check email)');
+    console.log(
+      "⚠️  Registration methods showing errors (expected for SMS, check email)"
+    );
   }
-  
-  const noTimeouts = results.every(r => r.status !== 'TIMEOUT');
+
+  const noTimeouts = results.every((r) => r.status !== "TIMEOUT");
   if (noTimeouts) {
-    console.log('✅ No timeouts - server is responding within acceptable time');
+    console.log("✅ No timeouts - server is responding within acceptable time");
   } else {
-    console.log('❌ Some requests timed out');
+    console.log("❌ Some requests timed out");
   }
-  
-  console.log('\n🎉 Production Status: ' + (successful >= 3 ? 'READY FOR USERS' : 'NEEDS ATTENTION'));
+
+  console.log(
+    "\n🎉 Production Status: " +
+      (successful >= 3 ? "READY FOR USERS" : "NEEDS ATTENTION")
+  );
 }
 
 runProductionVerification().catch(console.error);
