@@ -12,10 +12,23 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      required: function () {
+        return !this.phoneNumber; // Email required only if no phone number
+      },
       unique: true,
+      sparse: true, // Allow null values for unique index
       trim: true,
       lowercase: true,
+    },
+    phoneNumber: {
+      type: String,
+      required: function () {
+        return !this.email; // Phone required only if no email
+      },
+      unique: true,
+      sparse: true, // Allow null values for unique index
+      trim: true,
+      match: /^\+?[1-9]\d{1,14}$/, // E.164 format
     },
     password: {
       type: String,
@@ -58,9 +71,26 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Phone verification fields
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    phoneVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+    // Verification method used ('email' or 'phone')
+    verificationMethod: {
+      type: String,
+      enum: ["email", "phone"],
+      default: function () {
+        return this.email ? "email" : "phone";
+      },
+    },
     registrationCompleted: {
       type: Boolean,
-      default: false, // Only true after email verification
+      default: false, // Only true after verification (email or phone)
     },
     followers: [
       {
@@ -123,6 +153,14 @@ userSchema.virtual("followingCount").get(function () {
 // Virtual for post count
 userSchema.virtual("postCount").get(function () {
   return this.posts ? this.posts.length : 0;
+});
+
+// Virtual for verification status (email OR phone)
+userSchema.virtual("isVerificationComplete").get(function () {
+  return (
+    (this.verificationMethod === "email" && this.isEmailVerified) ||
+    (this.verificationMethod === "phone" && this.isPhoneVerified)
+  );
 });
 
 userSchema.set("toJSON", { virtuals: true });

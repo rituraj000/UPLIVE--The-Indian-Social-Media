@@ -5,14 +5,15 @@ import toast from 'react-hot-toast';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (credentials: { email?: string; phoneNumber?: string; password: string }) => Promise<boolean>;
   loginWithToken: (token: string, userData: User) => void;
   register: (userData: {
     username: string;
-    email: string;
+    email?: string;
+    phoneNumber?: string;
     password: string;
     fullName: string;
-  }) => Promise<{ success: boolean; requiresVerification?: boolean; message?: string }>;
+  }) => Promise<{ success: boolean; requiresVerification?: boolean; message?: string; verificationMethod?: 'email' | 'phone'; userId?: string }>;
   logout: () => void;
   loading: boolean;
   updateUser: (userData: Partial<User>) => void;
@@ -65,9 +66,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (credentials: { email?: string; phoneNumber?: string; password: string }): Promise<boolean> => {
     try {
-      const response = await authApi.login(email, password);
+      const response = await authApi.login(credentials);
       const { token, user: userData } = response.data;
       
       localStorage.setItem('token', token);
@@ -92,20 +93,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (userData: {
     username: string;
-    email: string;
+    email?: string;
+    phoneNumber?: string;
     password: string;
     fullName: string;
-  }): Promise<{ success: boolean; requiresVerification?: boolean; message?: string }> => {
+  }): Promise<{ success: boolean; requiresVerification?: boolean; message?: string; verificationMethod?: 'email' | 'phone'; userId?: string }> => {
     try {
       const response = await authApi.register(userData);
       
-      // New email verification flow
+      // New verification flow (email or phone)
       if (response.data.requiresVerification) {
-        toast.success('🇮🇳 Account created! Please check your email to verify your account.');
+        const verificationMethod = response.data.verificationMethod || 'email';
+        const message = verificationMethod === 'email' 
+          ? '🇮🇳 Account created! Please check your email to verify your account.'
+          : '🇮🇳 Account created! Please check your phone for the OTP.';
+        toast.success(message);
         return { 
           success: true, 
           requiresVerification: true,
-          message: response.data.message 
+          message: response.data.message,
+          verificationMethod: response.data.verificationMethod,
+          userId: response.data.userId
         };
       }
       

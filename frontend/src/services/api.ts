@@ -128,18 +128,32 @@ api.interceptors.response.use(
 
 // Auth API
 export const authApi = {
-  login: (email: string, password: string) =>
-    api.post<AuthResponse>('/auth/login', { email, password }),
+  login: (credentials: { email?: string; phoneNumber?: string; password: string }) =>
+    api.post<AuthResponse>('/auth/login', credentials),
   
   register: (userData: {
     username: string;
-    email: string;
+    email?: string;
+    phoneNumber?: string;
     password: string;
     fullName: string;
-  }) => api.post<{ message: string; requiresVerification?: boolean }>('/auth/register', userData),
+  }) => api.post<{ 
+    message: string; 
+    requiresVerification?: boolean; 
+    verificationMethod?: 'email' | 'phone';
+    userId?: string;
+    token?: string;
+    user?: User;
+  }>('/auth/register', userData),
   
   verifyEmail: (token: string) =>
     api.post<AuthResponse>('/auth/verify-email', { token }),
+  
+  sendOTP: (data: { phoneNumber: string; userId?: string }) =>
+    api.post<{ message: string; phoneNumber: string }>('/auth/send-otp', data),
+  
+  verifyOTP: (data: { phoneNumber: string; otp: string; userId: string }) =>
+    api.post<AuthResponse>('/auth/verify-otp', data),
   
   resendVerification: (email: string) =>
     api.post<{ message: string }>('/auth/resend-verification', { email }),

@@ -71,7 +71,7 @@ class EmailService {
           address: process.env.EMAIL_USER,
         },
         to: email,
-        subject: "≡ƒç«≡ƒç│ Verify your UPLIVE account - Made in India",
+        subject: "🚀 Verify your UPLIVE account - Made in India",
         html,
         text,
         headers: {
@@ -122,7 +122,7 @@ class EmailService {
           address: process.env.EMAIL_USER,
         },
         to: email,
-        subject: `≡ƒç«≡ƒç│ Welcome to UPLIVE, ${username}! - India's Own Social Platform`,
+        subject: `🇮🇳 Welcome to UPLIVE, ${username}! - India's Own Social Platform`,
         html,
         text,
         headers: {
@@ -225,7 +225,7 @@ class EmailService {
             <div class="header">
                 <div class="logo">UPLIVE</div>
                 <div class="flag"></div>
-                <h2>≡ƒç«≡ƒç│ Verify Your Account</h2>
+                                <h2>🚀 Verify Your Account</h2>
             </div>
 
             <p>Welcome to UPLIVE - India's own social media platform!</p>
@@ -237,7 +237,7 @@ class EmailService {
             </div>
 
             <div class="india-pride">
-                <strong>≡ƒç«≡ƒç│ Made in India, for India</strong><br>
+                <strong>🇮🇳 Made in India, for India</strong><br>
                 Your data stays within our nation. Join the movement towards digital independence!
             </div>
 
@@ -249,7 +249,7 @@ class EmailService {
             <div class="footer">
                 <p>If you didn't create an account with UPLIVE, please ignore this email.</p>
                 <p>Need help? Contact us at ${process.env.EMAIL_USER}</p>
-                <p>≡ƒç«≡ƒç│ UPLIVE - Connecting India, Protecting India</p>
+                <p>🇮🇳 UPLIVE - Connecting India, Protecting India</p>
             </div>
         </div>
     </body>
@@ -259,7 +259,7 @@ class EmailService {
 
   getVerificationEmailText(verificationUrl) {
     return `
-≡ƒç«≡ƒç│ UPLIVE - Verify Your Account
+🇮🇳 UPLIVE - Verify Your Account
 
 Welcome to UPLIVE - India's own social media platform!
 
@@ -267,7 +267,7 @@ To complete your registration and start connecting with friends, please verify y
 
 ${verificationUrl}
 
-≡ƒç«≡ƒç│ Made in India, for India
+🇮🇳 Made in India, for India
 Your data stays within our nation. Join the movement towards digital independence!
 
 IMPORTANT: This verification link will expire in 24 hours for security reasons.
@@ -276,7 +276,7 @@ If you didn't create an account with UPLIVE, please ignore this email.
 
 Need help? Contact us at ${process.env.EMAIL_USER}
 
-≡ƒç«≡ƒç│ UPLIVE - Connecting India, Protecting India
+🇮🇳 UPLIVE - Connecting India, Protecting India
     `;
   }
 
@@ -347,7 +347,7 @@ Need help? Contact us at ${process.env.EMAIL_USER}
             <div class="header">
                 <div class="logo">UPLIVE</div>
                 <div class="flag"></div>
-                <h2>≡ƒç«≡ƒç│ Welcome to UPLIVE, ${username}!</h2>
+                <h2>🇮🇳 Welcome to UPLIVE, ${username}!</h2>
             </div>
 
             <p>Your email has been verified successfully! Welcome to India's own social media platform.</p>
@@ -364,23 +364,23 @@ Need help? Contact us at ${process.env.EMAIL_USER}
             <h3>What you can do on UPLIVE:</h3>
             
             <div class="feature">
-                ≡ƒô╕ <strong>Share Your Moments:</strong> Post photos and videos with your friends
+                📷 <strong>Share Your Moments:</strong> Post photos and videos with your friends
             </div>
             
             <div class="feature">
-                ≡ƒÆ¼ <strong>Stay Connected:</strong> Message friends and family securely
+                💬 <strong>Stay Connected:</strong> Message friends and family securely
             </div>
             
             <div class="feature">
-                ≡ƒôû <strong>Stories:</strong> Share your daily life with 24-hour stories
+                📱 <strong>Stories:</strong> Share your daily life with 24-hour stories
             </div>
             
             <div class="feature">
-                ≡ƒç«≡ƒç│ <strong>Made in India:</strong> Your data stays secure within our nation
+                🇮🇳 <strong>Made in India:</strong> Your data stays secure within our nation
             </div>
 
             <p style="text-align: center; margin-top: 30px;">
-                <strong>≡ƒç«≡ƒç│ Join the movement towards digital independence!</strong>
+                <strong>🇮🇳 Join the movement towards digital independence!</strong>
             </p>
 
             <div style="text-align: center; margin-top: 30px; font-size: 14px; color: #666;">

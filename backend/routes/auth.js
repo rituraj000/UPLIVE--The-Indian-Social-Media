@@ -7,7 +7,11 @@ const User = require("../models/User");
 const PasswordReset = require("../models/PasswordReset");
 const auth = require("../middleware/auth");
 const emailVerificationService = require("../services/emailVerificationService");
+const PhoneVerificationService = require("../services/phoneVerificationService");
 const emailQueue = require("../services/emailQueue");
+
+// Create phone verification service instance
+const phoneVerificationService = new PhoneVerificationService();
 const emailService = require("../services/emailService");
 const { v4: uuidv4 } = require("uuid");
 
@@ -86,7 +90,7 @@ router.get("/check-username/:username", async (req, res) => {
 });
 
 // ------------------------------------------------------------------
-// Register Route with Email Verification
+// Register Route with Email OR Phone Verification
 // ------------------------------------------------------------------
 router.post(
   "/register",
@@ -98,9 +102,14 @@ router.post(
       .escape()
       .withMessage("Username must be at least 3 characters."),
     body("email")
+      .optional()
       .isEmail()
       .normalizeEmail()
       .withMessage("Please enter a valid email address."),
+    body("phoneNumber")
+      .optional()
+      .matches(/^\+?[1-9]\d{1,14}$/)
+      .withMessage("Please enter a valid phone number."),
     body("password")
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters."),
@@ -109,14 +118,31 @@ router.post(
       .trim()
       .escape()
       .withMessage("Full name is required."),
+    // Custom validation to ensure either email or phone is provided
+    body().custom((value, { req }) => {
+      if (!req.body.email && !req.body.phoneNumber) {
+        throw new Error("Either email or phone number is required");
+      }
+      if (req.body.email && req.body.phoneNumber) {
+        throw new Error(
+          "Please provide either email or phone number, not both"
+        );
+      }
+      return true;
+    }),
   ],
   async (req, res) => {
     const correlationId = req.headers["x-correlation-id"] || uuidv4();
 
     try {
+      const { username, email, phoneNumber, password, fullName } = req.body;
+      const verificationMethod = email ? "email" : "phone";
+      const identifier = email || phoneNumber;
+
       console.log("Registration attempt:", {
-        email: req.body.email,
-        username: req.body.username,
+        identifier,
+        username,
+        verificationMethod,
         correlationId,
       });
 
@@ -128,22 +154,33 @@ router.post(
         });
       }
 
-      const { username, email, password, fullName } = req.body;
-
       // Check if user exists
-      const existingUser = await User.findOne({
-        $or: [
-          { email: new RegExp(`^${email}$`, "i") },
-          { username: new RegExp(`^${username}$`, "i") },
-        ],
-      });
+      const existingUserQuery = {
+        $or: [{ username: new RegExp(`^${username}$`, "i") }],
+      };
+
+      if (email) {
+        existingUserQuery.$or.push({ email: new RegExp(`^${email}$`, "i") });
+      }
+
+      if (phoneNumber) {
+        existingUserQuery.$or.push({ phoneNumber });
+      }
+
+      const existingUser = await User.findOne(existingUserQuery);
 
       if (existingUser) {
-        // If user exists but email not verified, allow re-registration
-        if (!existingUser.isEmailVerified) {
+        // If user exists but not verified, allow re-registration
+        const isVerified =
+          verificationMethod === "email"
+            ? existingUser.isEmailVerified
+            : existingUser.isPhoneVerified;
+
+        if (!isVerified) {
           console.log("Re-registering unverified user:", {
             userId: existingUser._id,
-            email,
+            identifier,
+            verificationMethod,
             correlationId,
           });
 
@@ -154,105 +191,316 @@ router.post(
           existingUser.password = hashedPassword;
           existingUser.fullName = fullName;
           existingUser.username = username;
+
+          if (email) {
+            existingUser.email = email;
+            existingUser.verificationMethod = "email";
+          } else {
+            existingUser.phoneNumber = phoneNumber;
+            existingUser.verificationMethod = "phone";
+          }
+
           await existingUser.save();
 
-          // Create new verification token
-          await emailVerificationService.createVerification(
-            existingUser._id.toString(),
-            email,
-            req.ip,
-            req.get("User-Agent")
-          );
+          // Create verification
+          if (verificationMethod === "email") {
+            await emailVerificationService.createVerification(
+              existingUser._id.toString(),
+              email,
+              req.ip,
+              req.get("User-Agent")
+            );
 
-          return res.status(200).json({
-            message: "Verification email sent. Please check your inbox.",
-            requiresVerification: true,
-          });
+            return res.status(200).json({
+              message: "Verification email sent. Please check your inbox.",
+              requiresVerification: true,
+              verificationMethod: "email",
+            });
+          } else {
+            await phoneVerificationService.createVerification(
+              existingUser._id.toString(),
+              phoneNumber,
+              req.ip,
+              req.get("User-Agent")
+            );
+
+            return res.status(200).json({
+              message: "OTP sent to your phone number. Please verify.",
+              requiresVerification: true,
+              verificationMethod: "phone",
+              userId: existingUser._id.toString(),
+            });
+          }
         } else {
           return res.status(400).json({
-            message: "A user with this email or username already exists.",
+            message: "A user with this email/phone or username already exists.",
           });
         }
       }
 
-      // Create new user (BUT DON'T SAVE YET)
+      // Create new user
       const salt = await bcrypt.genSalt(12);
       const hashedPassword = await bcrypt.hash(password, salt);
 
       const userData = {
         username,
-        email,
         password: hashedPassword,
         fullName,
+        verificationMethod,
         isEmailVerified: false,
+        isPhoneVerified: false,
         registrationCompleted: false,
       };
 
-      // FIRST: Try to create email verification to ensure email service works
+      if (email) {
+        userData.email = email;
+      } else {
+        userData.phoneNumber = phoneNumber;
+      }
+
       try {
-        // Create a temporary user to get an ID for email verification
-        const tempUser = new User(userData);
-        const savedUser = await tempUser.save();
+        // Create user first
+        const newUser = new User(userData);
+        const savedUser = await newUser.save();
 
-        console.log("User created, attempting email verification:", {
+        console.log("User created, attempting verification:", {
           userId: savedUser._id,
-          email,
+          identifier,
+          verificationMethod,
           correlationId,
         });
 
-        // Create email verification - this will throw if email fails
-        const verification = await emailVerificationService.createVerification(
-          savedUser._id.toString(),
-          email,
-          req.ip,
-          req.get("User-Agent")
-        );
+        // Create verification
+        if (verificationMethod === "email") {
+          const verification =
+            await emailVerificationService.createVerification(
+              savedUser._id.toString(),
+              email,
+              req.ip,
+              req.get("User-Agent")
+            );
 
-        // Verify that email was actually sent
-        if (!verification) {
-          // If verification creation failed, delete the user and throw error
-          await User.findByIdAndDelete(savedUser._id);
-          throw new Error("Failed to send verification email");
+          if (!verification) {
+            await User.findByIdAndDelete(savedUser._id);
+            throw new Error("Failed to send verification email");
+          }
+
+          res.status(201).json({
+            message:
+              "Account created! Please check your email to verify your account.",
+            requiresVerification: true,
+            verificationMethod: "email",
+          });
+        } else {
+          const verification =
+            await phoneVerificationService.createVerification(
+              savedUser._id.toString(),
+              phoneNumber,
+              req.ip,
+              req.get("User-Agent")
+            );
+
+          if (!verification) {
+            await User.findByIdAndDelete(savedUser._id);
+            throw new Error("Failed to send OTP");
+          }
+
+          res.status(201).json({
+            message:
+              "Account created! Please verify your phone number with the OTP sent.",
+            requiresVerification: true,
+            verificationMethod: "phone",
+            userId: savedUser._id.toString(),
+          });
         }
-
-        res.status(201).json({
-          message:
-            "Account created! Please check your email to verify your account.",
-          requiresVerification: true,
-        });
-      } catch (emailError) {
-        console.error("Email verification failed during registration:", {
-          email,
+      } catch (verificationError) {
+        console.error("Verification failed during registration:", {
+          identifier,
+          verificationMethod,
           correlationId,
-          error: emailError.message,
+          error: verificationError.message,
         });
 
         // Clean up: try to delete user if it was created
         try {
-          await User.findOneAndDelete({ email: email });
+          await User.findOneAndDelete({
+            $or: [{ email }, { phoneNumber }, { username }],
+          });
         } catch (cleanupError) {
-          console.error(
-            "Failed to cleanup user after email failure:",
-            cleanupError.message
-          );
+          console.error("Cleanup failed:", cleanupError);
         }
 
         return res.status(500).json({
           message:
-            "Registration failed: Unable to send verification email. Please try again later.",
-          error: "EMAIL_SEND_FAILED",
+            verificationMethod === "email"
+              ? "Failed to send verification email. Please try again."
+              : "Failed to send OTP. Please try again.",
+          error: verificationError.message,
         });
       }
     } catch (error) {
-      console.error("Register error:", {
-        email: req.body.email,
+      console.error("Registration error:", {
         correlationId,
         error: error.message,
+        stack: error.stack,
       });
+
       res.status(500).json({
-        message: "Server error",
-        error: error.message,
+        message: "Server error during registration",
+        correlationId,
       });
+    }
+  }
+);
+
+// ------------------------------------------------------------------
+// Phone Verification Routes
+// ------------------------------------------------------------------
+
+// Send OTP (for registration or resend)
+router.post(
+  "/send-otp",
+  authLimiter,
+  [
+    body("phoneNumber")
+      .matches(/^\+?[1-9]\d{1,14}$/)
+      .withMessage("Please enter a valid phone number."),
+    body("userId").optional().isMongoId().withMessage("Invalid user ID"),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          message: "Validation Failed",
+          errors: errors.array(),
+        });
+      }
+
+      const { phoneNumber, userId } = req.body;
+
+      if (userId) {
+        // Resend OTP for existing user
+        await phoneVerificationService.resendOTP(phoneNumber, userId);
+      } else {
+        // This shouldn't happen in normal flow, but handle gracefully
+        return res.status(400).json({
+          message: "User ID required for OTP resend",
+        });
+      }
+
+      res.json({
+        message: "OTP sent successfully",
+        phoneNumber,
+      });
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      res.status(500).json({
+        message: error.message || "Failed to send OTP",
+      });
+    }
+  }
+);
+
+// Verify OTP
+router.post(
+  "/verify-otp",
+  authLimiter,
+  [
+    body("phoneNumber")
+      .matches(/^\+?[1-9]\d{1,14}$/)
+      .withMessage("Please enter a valid phone number."),
+    body("otp")
+      .isLength({ min: 6, max: 6 })
+      .isNumeric()
+      .withMessage("OTP must be 6 digits."),
+    body("userId").isMongoId().withMessage("Invalid user ID"),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          message: "Validation Failed",
+          errors: errors.array(),
+        });
+      }
+
+      const { phoneNumber, otp, userId } = req.body;
+
+      // Verify OTP
+      const verification = await phoneVerificationService.verifyOTP(
+        phoneNumber,
+        otp,
+        userId
+      );
+
+      // Update user as verified
+      const user = await User.findByIdAndUpdate(
+        verification.userId,
+        {
+          isPhoneVerified: true,
+          phoneVerifiedAt: new Date(),
+          registrationCompleted: true,
+        },
+        { new: true }
+      ).select("-password");
+
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
+
+      // Generate JWT token
+      const jwtToken = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET || "fallback_secret",
+        { expiresIn: "7d" }
+      );
+
+      console.log("Phone verification completed:", {
+        userId: user._id,
+        phoneNumber: user.phoneNumber,
+      });
+
+      res.json({
+        message: "Phone number verified successfully! Welcome to UPLIVE!",
+        token: jwtToken,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          fullName: user.fullName,
+          profilePicture: user.profilePicture,
+          isPhoneVerified: user.isPhoneVerified,
+          hasSeenWelcome: user.hasSeenWelcome,
+        },
+      });
+    } catch (error) {
+      console.error("OTP verification error:", error);
+
+      let message = "Verification failed";
+      let statusCode = 400;
+
+      switch (error.message) {
+        case "Invalid OTP or phone number":
+          message = "Invalid OTP. Please check and try again.";
+          break;
+        case "OTP has expired":
+          message = "OTP has expired. Please request a new one.";
+          break;
+        case "Too many failed attempts":
+          message = "Too many failed attempts. Please request a new OTP.";
+          statusCode = 429;
+          break;
+        default:
+          message = "Verification failed. Please try again.";
+          statusCode = 500;
+      }
+
+      res.status(statusCode).json({ message });
     }
   }
 );
@@ -460,24 +708,48 @@ router.post(
 );
 
 // ------------------------------------------------------------------
-// Login Route (Updated to check email verification)
+// Login Route (Updated to support email OR phone verification)
 // ------------------------------------------------------------------
 router.post("/login", authLimiter, async (req, res) => {
   const correlationId = req.headers["x-correlation-id"] || uuidv4();
 
   try {
-    const { email, password } = req.body;
+    const { email, phoneNumber, password } = req.body;
+    const identifier = email || phoneNumber;
 
-    console.log("Login attempt:", { email, correlationId });
+    console.log("Login attempt:", { identifier, correlationId });
 
-    // Find user by email
-    const user = await User.findOne({
-      email: new RegExp(`^${email}$`, "i"),
-    });
+    if (!identifier) {
+      return res.status(400).json({
+        message: "Email or phone number is required.",
+      });
+    }
+
+    // Find user by email or phone
+    let query;
+    if (email) {
+      query = { email: new RegExp(`^${email}$`, "i") };
+    } else {
+      // Handle phone numbers with or without +91 prefix
+      const phoneVariants = [phoneNumber];
+
+      // If phone starts with +91, also try without prefix
+      if (phoneNumber.startsWith("+91")) {
+        phoneVariants.push(phoneNumber.substring(3));
+      }
+      // If phone doesn't start with +91, also try with prefix
+      else if (!phoneNumber.startsWith("+")) {
+        phoneVariants.push("+91" + phoneNumber);
+      }
+
+      query = { phoneNumber: { $in: phoneVariants } };
+    }
+
+    const user = await User.findOne(query);
 
     if (!user) {
       return res.status(400).json({
-        message: "Invalid email or password.",
+        message: "Invalid credentials.",
       });
     }
 
@@ -485,15 +757,21 @@ router.post("/login", authLimiter, async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({
-        message: "Invalid email or password.",
+        message: "Invalid credentials.",
       });
     }
 
-    // Check if email is verified
-    if (!user.isEmailVerified) {
+    // Check if verification is complete (email OR phone)
+    const isVerified =
+      user.verificationMethod === "email"
+        ? user.isEmailVerified
+        : user.isPhoneVerified;
+
+    if (!isVerified) {
       return res.status(403).json({
-        message: "Please verify your email before logging in.",
+        message: `Please verify your ${user.verificationMethod} before logging in.`,
         requiresVerification: true,
+        verificationMethod: user.verificationMethod,
       });
     }
 
@@ -506,7 +784,8 @@ router.post("/login", authLimiter, async (req, res) => {
 
     console.log("Login successful:", {
       userId: user._id,
-      email,
+      identifier,
+      verificationMethod: user.verificationMethod,
       correlationId,
     });
 
@@ -516,15 +795,17 @@ router.post("/login", authLimiter, async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        phoneNumber: user.phoneNumber,
         fullName: user.fullName,
         profilePicture: user.profilePicture,
         isEmailVerified: user.isEmailVerified,
+        isPhoneVerified: user.isPhoneVerified,
+        verificationMethod: user.verificationMethod,
         hasSeenWelcome: user.hasSeenWelcome,
       },
     });
   } catch (error) {
     console.error("Login error:", {
-      email: req.body.email,
       correlationId,
       error: error.message,
     });

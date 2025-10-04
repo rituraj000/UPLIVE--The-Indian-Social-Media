@@ -37,7 +37,7 @@ const Logo = styled(Typography)({
 });
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(''); // Can be email or phone
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -45,19 +45,54 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // Helper function to determine if input is email or phone
+  const isEmail = (value: string) => {
+    return value.includes('@');
+  };
+
+  const isPhoneNumber = (value: string) => {
+    return /^\+?[1-9]\d{1,14}$/.test(value.replace(/\s/g, ''));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const success = await login(email, password);
+      // Determine login credentials based on input
+      const credentials: { email?: string; phoneNumber?: string; password: string } = {
+        password
+      };
+
+      if (isEmail(identifier)) {
+        credentials.email = identifier;
+      } else if (isPhoneNumber(identifier)) {
+        // Format phone number for Indian numbers
+        let formattedPhone = identifier.replace(/\s/g, '');
+        if (!formattedPhone.startsWith('+')) {
+          if (formattedPhone.length === 10 && !formattedPhone.startsWith('91')) {
+            formattedPhone = '+91' + formattedPhone;
+          } else if (!formattedPhone.startsWith('+')) {
+            formattedPhone = '+' + formattedPhone;
+          }
+        }
+        credentials.phoneNumber = formattedPhone;
+      } else {
+        setError('Please enter a valid email address or phone number');
+        setLoading(false);
+        return;
+      }
+
+      const success = await login(credentials);
       if (success) {
         navigate('/');
       }
     } catch (err: any) {
       if (err.message === 'EMAIL_VERIFICATION_REQUIRED') {
         setError('Please verify your email before logging in. Check your inbox for the verification email.');
+      } else if (err.message.includes('verify your phone')) {
+        setError('Please verify your phone number before logging in.');
       } else {
         setError(err.message || 'Login failed. Please try again.');
       }
@@ -82,13 +117,14 @@ const Login: React.FC = () => {
             <Box component="form" onSubmit={handleSubmit}>
               <TextField
                 fullWidth
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                label="Email or Phone Number"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 margin="normal"
                 required
                 autoFocus
+                placeholder="Enter email or phone number (e.g., +919876543210)"
+                helperText="You can login with either your email address or phone number"
               />
               
               <TextField

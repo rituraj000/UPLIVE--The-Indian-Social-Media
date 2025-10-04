@@ -36,9 +36,9 @@ class EmailVerificationService {
 
       await verification.save();
 
-      // Use SendGrid directly instead of queue (Render blocks SMTP)
-      console.log("Sending verification email directly via SendGrid...");
-      const emailService = require("./sendGridEmailService");
+      // Use Gmail SMTP service instead of SendGrid
+      console.log("Sending verification email via Gmail SMTP...");
+      const emailService = require("./emailService");
       try {
         const emailResult = await emailService.sendVerificationEmail({
           email,
@@ -46,9 +46,9 @@ class EmailVerificationService {
           userId,
           correlationId: crypto.randomUUID(),
         });
-        console.log("Verification email sent successfully via SendGrid");
+        console.log("Verification email sent successfully via Gmail SMTP");
       } catch (emailError) {
-        console.error("SendGrid email send failed:", emailError.message);
+        console.error("Gmail SMTP email send failed:", emailError.message);
         // Delete the verification record since email failed
         await EmailVerification.findByIdAndDelete(verification._id);
         throw new Error(

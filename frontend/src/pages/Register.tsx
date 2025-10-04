@@ -10,9 +10,16 @@ import {
   Container,
   Alert,
   InputAdornment,
-  CircularProgress
+  CircularProgress,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
-import { Check as CheckIcon, Close as CloseIcon } from '@mui/icons-material';
+import { 
+  Check as CheckIcon, 
+  Close as CloseIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon 
+} from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -40,15 +47,21 @@ const Logo = styled(Typography)({
 });
 
 const Register: React.FC = () => {
+  const [verificationMethod, setVerificationMethod] = useState<'email' | 'phone'>('email');
   const [formData, setFormData] = useState({
     email: '',
+    phoneNumber: '',
     fullName: '',
     username: '',
     password: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [emailSent, setEmailSent] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [userId, setUserId] = useState('');
+  const [showOTPField, setShowOTPField] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
   
   // Username validation states
   const [usernameStatus, setUsernameStatus] = useState<{
@@ -140,23 +153,61 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      const result = await register(formData);
-      if (result.success) {
-        if (result.requiresVerification) {
-          // Show success message and stay on register page with instructions
-          setError(''); // Clear any previous errors
-          setEmailSent(true);
-        } else {
-          // Direct login (legacy flow)
-          navigate('/welcome');
+      const registrationData = {
+        username: formData.username,
+        fullName: formData.fullName,
+        password: formData.password,
+        ...(verificationMethod === 'email' 
+          ? { email: formData.email } 
+          : { phoneNumber: formData.phoneNumber }
+        )
+      };
+
+      const result = await register(registrationData);
+      if (result?.success) {
+        if (result.verificationMethod === 'email') {
+          setRegistrationSuccess(true);
+        } else if (result.verificationMethod === 'phone') {
+          setUserId(result.userId || '');
+          setShowOTPField(true);
+          setRegistrationSuccess(true);
         }
       }
     } catch (err: any) {
-      // Use the specific error message thrown from AuthContext
       const errorMessage = err.message || 'Registration failed. Please try again.';
       setError(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otp.trim() || otp.length !== 6) {
+      setError('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    setOtpLoading(true);
+    setError('');
+
+    try {
+      const { authApi } = await import('../services/api');
+      const response = await authApi.verifyOTP({ 
+        phoneNumber: formData.phoneNumber, 
+        otp, 
+        userId 
+      });
+      
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        navigate('/');
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'OTP verification failed';
+      setError(errorMessage);
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -177,7 +228,7 @@ const Register: React.FC = () => {
               </Alert>
             )}
 
-            {emailSent && (
+            {registrationSuccess && verificationMethod === 'email' && !showOTPField && (
               <Alert severity="success" sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
                   🇮🇳 Account Created Successfully!
@@ -191,20 +242,78 @@ const Register: React.FC = () => {
               </Alert>
             )}
 
-            {!emailSent && (
+            {registrationSuccess && verificationMethod === 'phone' && !showOTPField && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  🇮🇳 Account Created Successfully!
+                </Typography>
+                <Typography variant="body2">
+                  An OTP has been sent to your phone number. Please verify to complete registration.
+                </Typography>
+              </Alert>
+            )}
+
+            {!registrationSuccess && (
               <>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  Choose your verification method:
+                </Typography>
+                
+                <ToggleButtonGroup
+                  value={verificationMethod}
+                  exclusive
+                  onChange={(e, value) => value && setVerificationMethod(value)}
+                  sx={{ mb: 2, width: '100%' }}
+                >
+                  <ToggleButton value="email" sx={{ flex: 1 }}>
+                    <EmailIcon sx={{ mr: 1 }} /> Email
+                  </ToggleButton>
+                  <ToggleButton value="phone" sx={{ flex: 1 }}>
+                    <PhoneIcon sx={{ mr: 1 }} /> Phone
+                  </ToggleButton>
+                </ToggleButtonGroup>
+
                 <Box component="form" onSubmit={handleSubmit}>
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    margin="normal"
-                    required
-                    autoFocus
-                  />
+                  {verificationMethod === 'email' ? (
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      margin="normal"
+                      required
+                      autoFocus
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <EmailIcon />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  ) : (
+                    <TextField
+                      fullWidth
+                      label="Phone Number"
+                      name="phoneNumber"
+                      type="tel"
+                      value={formData.phoneNumber}
+                      onChange={handleChange}
+                      margin="normal"
+                      required
+                      autoFocus
+                      placeholder="+91 XXXXXXXXXX"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <PhoneIcon />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  )}
                   
                   <TextField
                     fullWidth
@@ -269,7 +378,39 @@ const Register: React.FC = () => {
               </>
             )}
 
-            {emailSent && (
+            {showOTPField && (
+              <Box sx={{ mt: 2 }}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    Please enter the 6-digit OTP sent to {formData.phoneNumber}
+                  </Typography>
+                </Alert>
+                
+                <TextField
+                  fullWidth
+                  label="Enter OTP"
+                  type="number"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.slice(0, 6))}
+                  margin="normal"
+                  required
+                  placeholder="Enter 6-digit OTP"
+                />
+                
+                <Button
+                  type="button"
+                  fullWidth
+                  variant="contained"
+                  onClick={handleVerifyOTP}
+                  disabled={otpLoading || !otp.trim() || otp.length !== 6}
+                  sx={{ mt: 3, mb: 2 }}
+                >
+                  {otpLoading ? <CircularProgress size={24} /> : 'Verify OTP'}
+                </Button>
+              </Box>
+            )}
+
+            {(registrationSuccess && verificationMethod === 'email') && (
               <Box sx={{ textAlign: 'center', mt: 2 }}>
                 <Button
                   variant="outlined"
