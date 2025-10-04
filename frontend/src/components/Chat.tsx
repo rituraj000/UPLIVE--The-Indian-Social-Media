@@ -77,6 +77,10 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
       setChatUser(selectedUser);
       // Reset message count ref when switching conversations
       lastMessageCountRef.current = 0;
+      // Scroll to bottom when opening a new conversation
+      setTimeout(() => {
+        scrollToBottom();
+      }, 500);
     }
   }, [selectedUser]);
 
@@ -95,28 +99,33 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
     }
   };
 
-  // Auto-scroll logic - only scroll when:
-  // 1. Initial load (messages just loaded)
-  // 2. User sends a message (new message count increases and last message is from current user)
+  // Auto-scroll logic - scroll for all new messages
   useEffect(() => {
     if (messages.length === 0) return;
     
-    // Check if this is initial load or user sent a new message
+    // Check if this is initial load or there are new messages
     const isInitialLoad = lastMessageCountRef.current === 0;
     const isNewMessage = messages.length > lastMessageCountRef.current;
-    const lastMessage = messages[messages.length - 1];
-    const userSentMessage = lastMessage?.sender?.id === currentUser?.id;
+    
+    console.log('Auto-scroll check:', {
+      isInitialLoad,
+      isNewMessage,
+      messageCount: messages.length,
+      lastCount: lastMessageCountRef.current
+    });
     
     // Update message count reference
     lastMessageCountRef.current = messages.length;
     
-    // Auto-scroll only on initial load or when current user sends message
-    if (isInitialLoad || (isNewMessage && userSentMessage)) {
+    // Auto-scroll on initial load or any new message
+    if (isInitialLoad || isNewMessage) {
+      console.log('Auto-scrolling to bottom...');
       // Use multiple timeouts to ensure scroll works even with slow rendering
       setTimeout(scrollToBottom, 100);
       setTimeout(scrollToBottom, 300);
+      setTimeout(scrollToBottom, 500);
     }
-  }, [messages, currentUser?.id]);
+  }, [messages]);
 
   // Fetch chat user and messages
   useEffect(() => {
