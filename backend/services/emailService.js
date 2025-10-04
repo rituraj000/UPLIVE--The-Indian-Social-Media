@@ -28,13 +28,20 @@ class EmailService {
         );
       }
 
-      // Gmail configuration
+      // Gmail configuration with timeout settings
       this.transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
+        pool: true,
+        maxConnections: 1,
+        rateDelta: 20000,
+        rateLimit: 5,
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 5000, // 5 seconds
+        socketTimeout: 15000, // 15 seconds
       });
 
       // Verify connection

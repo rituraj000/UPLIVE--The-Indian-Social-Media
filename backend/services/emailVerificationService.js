@@ -36,24 +36,49 @@ class EmailVerificationService {
 
       await verification.save();
 
-      // Use Gmail SMTP service instead of SendGrid
-      console.log("Sending verification email via Gmail SMTP...");
-      const emailService = require("./emailService");
+      // Try Gmail SMTP first, fallback to SendGrid
+      console.log("Sending verification email...");
+      let emailSent = false;
+
+      // Try Gmail SMTP first
       try {
-        const emailResult = await emailService.sendVerificationEmail({
+        const emailService = require("./emailService");
+        const emailPromise = emailService.sendVerificationEmail({
           email,
           token: verification.token,
           userId,
           correlationId: crypto.randomUUID(),
         });
-        console.log("Verification email sent successfully via Gmail SMTP");
-      } catch (emailError) {
-        console.error("Gmail SMTP email send failed:", emailError.message);
-        // Delete the verification record since email failed
-        await EmailVerification.findByIdAndDelete(verification._id);
-        throw new Error(
-          `Failed to send verification email: ${emailError.message}`
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Gmail SMTP timeout")), 10000)
         );
+
+        await Promise.race([emailPromise, timeoutPromise]);
+        console.log("✅ Verification email sent via Gmail SMTP");
+        emailSent = true;
+      } catch (gmailError) {
+        console.warn("Gmail SMTP failed:", gmailError.message);
+
+        // Fallback to SendGrid
+        try {
+          console.log("🔄 Trying SendGrid as fallback...");
+          const sendGridService = require("./sendGridEmailService");
+          await sendGridService.sendVerificationEmail({
+            email,
+            token: verification.token,
+            userId,
+            correlationId: crypto.randomUUID(),
+          });
+          console.log("✅ Verification email sent via SendGrid");
+          emailSent = true;
+        } catch (sendGridError) {
+          console.error("SendGrid also failed:", sendGridError.message);
+        }
+      }
+
+      if (!emailSent) {
+        console.warn("⚠️ Both email services failed - user can resend later");
       }
 
       console.log("Email verification created:", {
