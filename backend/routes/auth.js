@@ -304,26 +304,65 @@ router.post(
             verificationMethod: "email",
           });
         } else {
-          const verification =
-            await phoneVerificationService.createVerification(
-              savedUser._id.toString(),
+          // Phone verification with enhanced error handling
+          try {
+            console.log("🔄 Attempting phone verification creation...");
+
+            const verification =
+              await phoneVerificationService.createVerification(
+                savedUser._id.toString(),
+                phoneNumber,
+                req.ip,
+                req.get("User-Agent")
+              );
+
+            if (!verification) {
+              console.error("❌ Phone verification returned null");
+              await User.findByIdAndDelete(savedUser._id);
+              throw new Error("Phone verification service unavailable");
+            }
+
+            console.log("✅ Phone verification created successfully");
+            res.status(201).json({
+              message:
+                "Account created! Please verify your phone number with the OTP sent.",
+              requiresVerification: true,
+              verificationMethod: "phone",
+              userId: savedUser._id.toString(),
+            });
+          } catch (phoneError) {
+            console.error("❌ Phone verification error:", {
+              userId: savedUser._id,
               phoneNumber,
-              req.ip,
-              req.get("User-Agent")
-            );
+              error: phoneError.message,
+              stack: phoneError.stack,
+            });
 
-          if (!verification) {
+            // Clean up user
             await User.findByIdAndDelete(savedUser._id);
-            throw new Error("Failed to send OTP");
-          }
 
-          res.status(201).json({
-            message:
-              "Account created! Please verify your phone number with the OTP sent.",
-            requiresVerification: true,
-            verificationMethod: "phone",
-            userId: savedUser._id.toString(),
-          });
+            // Throw specific error based on the phone error
+            if (phoneError.message.includes("Too many")) {
+              throw new Error(
+                "Too many SMS requests. Please wait a few minutes before trying again."
+              );
+            } else if (phoneError.message.includes("Invalid phone number")) {
+              throw new Error(
+                "Invalid phone number format. Please enter a valid international phone number."
+              );
+            } else if (
+              phoneError.message.includes("not verified") ||
+              phoneError.message.includes("Trial account")
+            ) {
+              throw new Error(
+                "SMS service temporarily unavailable. Please try email registration instead."
+              );
+            } else {
+              throw new Error(
+                "Failed to send verification SMS. Please try again or use email registration."
+              );
+            }
+          }
         }
       } catch (verificationError) {
         console.error("Verification failed during registration:", {
@@ -351,16 +390,68 @@ router.post(
         });
       }
     } catch (error) {
-      console.error("Registration error:", {
+      console.error("❌ REGISTRATION ERROR - FULL DETAILS:", {
         correlationId,
-        error: error.message,
-        stack: error.stack,
+        errorMessage: error.message,
+        errorStack: error.stack,
+        errorName: error.name,
+        timestamp: new Date().toISOString(),
+        nodeEnv: process.env.NODE_ENV,
+        mongoConnected: mongoose.connection.readyState === 1,
+        twilioConfigured: !!(
+          process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+        ),
+        requestBody: {
+          hasUsername: !!req.body.username,
+          hasEmail: !!req.body.email,
+          hasPhone: !!req.body.phoneNumber,
+          hasPassword: !!req.body.password,
+          hasFullName: !!req.body.fullName,
+        },
       });
 
-      res.status(500).json({
-        message: "Server error during registration",
-        correlationId,
-      });
+      // Send different responses based on error type
+      if (
+        error.message.includes("Failed to send OTP") ||
+        error.message.includes("SMS")
+      ) {
+        return res.status(500).json({
+          message:
+            "Failed to send verification SMS. Please try again or use email registration.",
+          error: "SMS_SERVICE_ERROR",
+          correlationId,
+        });
+      } else if (error.message.includes("email")) {
+        return res.status(500).json({
+          message: "Failed to send verification email. Please try again.",
+          error: "EMAIL_SERVICE_ERROR",
+          correlationId,
+        });
+      } else if (error.name === "ValidationError") {
+        return res.status(400).json({
+          message: "Invalid registration data provided.",
+          error: "VALIDATION_ERROR",
+          correlationId,
+        });
+      } else if (
+        error.message.includes("duplicate key") ||
+        error.code === 11000
+      ) {
+        return res.status(400).json({
+          message: "Username, email, or phone number already exists.",
+          error: "DUPLICATE_USER",
+          correlationId,
+        });
+      } else {
+        return res.status(500).json({
+          message:
+            "Registration temporarily unavailable. Please try again in a few minutes.",
+          error: "INTERNAL_SERVER_ERROR",
+          correlationId,
+          debug:
+            process.env.NODE_ENV === "development" ? error.message : undefined,
+        });
+      }
     }
   }
 );

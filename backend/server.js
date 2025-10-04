@@ -10,6 +10,8 @@ require("dotenv").config();
 
 // Import routes
 const authRoutes = require("./routes/auth");
+const authSafeRoutes = require("./routes/authSafe");
+const debugRoutes = require("./routes/debug");
 const userRoutes = require("./routes/user");
 const postRoutes = require("./routes/post");
 const storyRoutes = require("./routes/story");
@@ -148,6 +150,8 @@ io.on("connection", (socket) => {
 
 // Routes
 app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/auth", authLimiter, authSafeRoutes); // Safe fallback routes
+app.use("/api/debug", debugRoutes); // Debug routes for production troubleshooting
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/stories", storyRoutes);
