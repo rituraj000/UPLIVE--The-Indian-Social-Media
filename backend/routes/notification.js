@@ -319,8 +319,8 @@ const createNotification = async (
           );
           return;
         }
-      } else {
-        // Check if similar notification already exists (prevent spam)
+      } else if (type === "like" || type === "comment") {
+        // Only prevent duplicates for likes and comments on the same post
         const existingNotification = await Notification.findOne({
           type,
           fromUser: fromUserId,
@@ -336,6 +336,8 @@ const createNotification = async (
           return existingNotification;
         }
       }
+      // For "follow" type notifications, always create them (no duplicate prevention)
+      // This allows users to get notified every time someone follows them, even if they unfollowed and followed again
     }
 
     const notificationData = {

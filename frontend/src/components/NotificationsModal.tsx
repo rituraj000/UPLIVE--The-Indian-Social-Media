@@ -29,6 +29,68 @@ import { useAuth } from '../context/AuthContext';
 import { Notification } from '../types';
 import toast from 'react-hot-toast';
 
+// Helper functions for date formatting
+const isToday = (date: Date) => {
+  const today = new Date();
+  return date.toDateString() === today.toDateString();
+};
+
+const isYesterday = (date: Date) => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return date.toDateString() === yesterday.toDateString();
+};
+
+const getDateLabel = (date: Date) => {
+  if (isToday(date)) return 'Today';
+  if (isYesterday(date)) return 'Yesterday';
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+};
+
+const groupNotificationsByDate = (notifications: Notification[]) => {
+  const groups: { [key: string]: Notification[] } = {};
+  
+  notifications.forEach(notification => {
+    const date = new Date(notification.createdAt);
+    const label = getDateLabel(date);
+    
+    if (!groups[label]) {
+      groups[label] = [];
+    }
+    groups[label].push(notification);
+  });
+  
+  // Sort groups by date (Today first, then Yesterday, then older dates)
+  const sortedGroups: { label: string; notifications: Notification[] }[] = [];
+  
+  if (groups['Today']) {
+    sortedGroups.push({ label: 'Today', notifications: groups['Today'] });
+  }
+  
+  if (groups['Yesterday']) {
+    sortedGroups.push({ label: 'Yesterday', notifications: groups['Yesterday'] });
+  }
+  
+  // Add other dates in chronological order (newest first)
+  Object.keys(groups)
+    .filter(label => label !== 'Today' && label !== 'Yesterday')
+    .sort((a, b) => {
+      const dateA = new Date(groups[a][0].createdAt);
+      const dateB = new Date(groups[b][0].createdAt);
+      return dateB.getTime() - dateA.getTime();
+    })
+    .forEach(label => {
+      sortedGroups.push({ label, notifications: groups[label] });
+    });
+  
+  return sortedGroups;
+};
+
 interface NotificationsModalProps {
   open: boolean;
   onClose: () => void;
@@ -231,23 +293,81 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ open, onClose }
     // Close the modal after navigation
     onClose();
   };  const formatNotificationText = (notification: Notification) => {
+    const handleUsernameClick = (e: React.MouseEvent, username: string) => {
+      e.stopPropagation();
+      navigate(`/${username}`);
+      onClose();
+    };
+
+    const UsernameLink = ({ username }: { username: string }) => (
+      <span
+        style={{
+          fontWeight: 'bold',
+          color: '#000000',
+          cursor: 'pointer',
+          textDecoration: 'none'
+        }}
+        onClick={(e) => handleUsernameClick(e, username)}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.textDecoration = 'underline';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.textDecoration = 'none';
+        }}
+      >
+        {username}
+      </span>
+    );
+
     switch (notification.type) {
       case 'follow':
-        return `${notification.fromUser.username} started following you`;
+        return (
+          <>
+            <UsernameLink username={notification.fromUser.username} /> started following you
+          </>
+        );
       case 'follow_request':
-        return `${notification.fromUser.username} wants to follow you`;
+        return (
+          <>
+            <UsernameLink username={notification.fromUser.username} /> wants to follow you
+          </>
+        );
       case 'follow_request_accepted':
-        return `${notification.fromUser.username} accepted your follow request`;
+        return (
+          <>
+            <UsernameLink username={notification.fromUser.username} /> accepted your follow request
+          </>
+        );
       case 'follow_back_suggestion':
-        return `${notification.fromUser.username} accepted your follow request. Follow back?`;
+        return (
+          <>
+            <UsernameLink username={notification.fromUser.username} /> accepted your follow request. Follow back?
+          </>
+        );
       case 'like':
-        return `${notification.fromUser.username} liked your post`;
+        return (
+          <>
+            <UsernameLink username={notification.fromUser.username} /> liked your post
+          </>
+        );
       case 'comment':
-        return `${notification.fromUser.username} commented on your post`;
+        return (
+          <>
+            <UsernameLink username={notification.fromUser.username} /> commented on your post
+          </>
+        );
       case 'mention':
-        return `${notification.fromUser.username} mentioned you in a comment`;
+        return (
+          <>
+            <UsernameLink username={notification.fromUser.username} /> mentioned you in a comment
+          </>
+        );
       case 'message':
-        return `${notification.fromUser.username} sent you a message: ${notification.message || 'New message'}`;
+        return (
+          <>
+            <UsernameLink username={notification.fromUser.username} /> sent you a message: {notification.message || 'New message'}
+          </>
+        );
       default:
         return 'New notification';
     }
@@ -318,20 +438,50 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ open, onClose }
           </Box>
         ) : (
           <List sx={{ py: 0 }}>
-            {notifications.map((notification, index) => {
-              // Skip notifications with missing fromUser data
-              if (!notification.fromUser || !notification.fromUser.username) {
-                console.warn('Skipping notification with missing fromUser:', notification);
-                return null;
-              }
-              
-              return (
-              <React.Fragment key={notification.id}>
+            {groupNotificationsByDate(notifications).map((group, groupIndex) => (
+              <React.Fragment key={group.label}>
+                {/* Date Header */}
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    backgroundColor: 'grey.50',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 1
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      fontWeight: 600,
+                      color: 'text.primary',
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5,
+                      fontSize: '0.75rem'
+                    }}
+                  >
+                    {group.label}
+                  </Typography>
+                </Box>
+                
+                {/* Notifications for this date */}
+                {group.notifications.map((notification, index) => {
+                  // Skip notifications with missing fromUser data
+                  if (!notification.fromUser || !notification.fromUser.username) {
+                    console.warn('Skipping notification with missing fromUser:', notification);
+                    return null;
+                  }
+                  
+                  return (
+                  <React.Fragment key={notification.id}>
                 <ListItem
                   sx={{
                     backgroundColor: notification.isRead ? 'transparent' : 'action.hover',
                     cursor: notification.type === 'follow_request' ? 'default' : 'pointer',
-                    opacity: notification.isRead ? 0.6 : 1,
+                    color: '#000000', // Always black text
                     '&:hover': {
                       backgroundColor: notification.isRead ? 'action.hover' : 'action.selected'
                     }
@@ -351,7 +501,7 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ open, onClose }
                   <ListItemText
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2">
+                        <Typography variant="body2" sx={{ color: '#000000' }}>
                           {formatNotificationText(notification)}
                         </Typography>
                         {!notification.isRead && (
@@ -366,7 +516,14 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ open, onClose }
                         )}
                       </Box>
                     }
-                    secondary={formatDate(notification.createdAt)}
+                    secondary={
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(notification.createdAt).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </Typography>
+                    }
                   />
 
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -462,10 +619,17 @@ const NotificationsModal: React.FC<NotificationsModalProps> = ({ open, onClose }
                   </Box>
                 </ListItem>
                 
-                {index < notifications.length - 1 && <Divider />}
+                {index < group.notifications.length - 1 && <Divider />}
               </React.Fragment>
             );}
             )}
+                
+                {/* Divider between date groups */}
+                {groupIndex < groupNotificationsByDate(notifications).length - 1 && (
+                  <Divider sx={{ my: 2, borderColor: 'primary.main', borderWidth: 1 }} />
+                )}
+              </React.Fragment>
+            ))}
           </List>
         )}
       </DialogContent>
