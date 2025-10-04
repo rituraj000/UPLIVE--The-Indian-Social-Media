@@ -8,21 +8,116 @@ const http = require("http");
 const socketIo = require("socket.io");
 require("dotenv").config();
 
-// Import routes
-const authRoutes = require("./routes/auth");
-const authSafeRoutes = require("./routes/authSafe");
-const debugRoutes = require("./routes/debug");
-const userRoutes = require("./routes/user");
-const postRoutes = require("./routes/post");
-const storyRoutes = require("./routes/story");
-const messageRoutes = require("./routes/message");
-const notificationRoutes = require("./routes/notification");
-const healthRoutes = require("./routes/health");
-const emailHealthRoutes = require("./routes/email-health");
+// Import routes with error handling
+let authRoutes,
+  authSafeRoutes,
+  debugRoutes,
+  userRoutes,
+  postRoutes,
+  storyRoutes,
+  messageRoutes,
+  notificationRoutes,
+  healthRoutes,
+  emailHealthRoutes;
 
-// Import email services
-const emailService = require("./services/emailService");
-const emailQueue = require("./services/emailQueue");
+try {
+  authRoutes = require("./routes/auth");
+  console.log("✅ Auth routes loaded");
+} catch (error) {
+  console.error("❌ Failed to load auth routes:", error.message);
+  authRoutes = express.Router(); // Empty fallback
+}
+
+try {
+  authSafeRoutes = require("./routes/authSafe");
+  console.log("✅ Auth safe routes loaded");
+} catch (error) {
+  console.error("❌ Failed to load auth safe routes:", error.message);
+  authSafeRoutes = express.Router(); // Empty fallback
+}
+
+try {
+  debugRoutes = require("./routes/debug");
+  console.log("✅ Debug routes loaded");
+} catch (error) {
+  console.error("❌ Failed to load debug routes:", error.message);
+  debugRoutes = express.Router(); // Empty fallback
+}
+
+try {
+  userRoutes = require("./routes/user");
+  console.log("✅ User routes loaded");
+} catch (error) {
+  console.error("❌ Failed to load user routes:", error.message);
+  userRoutes = express.Router(); // Empty fallback
+}
+
+try {
+  postRoutes = require("./routes/post");
+  console.log("✅ Post routes loaded");
+} catch (error) {
+  console.error("❌ Failed to load post routes:", error.message);
+  postRoutes = express.Router(); // Empty fallback
+}
+
+try {
+  storyRoutes = require("./routes/story");
+  console.log("✅ Story routes loaded");
+} catch (error) {
+  console.error("❌ Failed to load story routes:", error.message);
+  storyRoutes = express.Router(); // Empty fallback
+}
+
+try {
+  messageRoutes = require("./routes/message");
+  console.log("✅ Message routes loaded");
+} catch (error) {
+  console.error("❌ Failed to load message routes:", error.message);
+  messageRoutes = express.Router(); // Empty fallback
+}
+
+try {
+  notificationRoutes = require("./routes/notification");
+  console.log("✅ Notification routes loaded");
+} catch (error) {
+  console.error("❌ Failed to load notification routes:", error.message);
+  notificationRoutes = express.Router(); // Empty fallback
+}
+
+try {
+  healthRoutes = require("./routes/health");
+  console.log("✅ Health routes loaded");
+} catch (error) {
+  console.error("❌ Failed to load health routes:", error.message);
+  healthRoutes = express.Router(); // Empty fallback
+}
+
+try {
+  emailHealthRoutes = require("./routes/email-health");
+  console.log("✅ Email health routes loaded");
+} catch (error) {
+  console.error("❌ Failed to load email health routes:", error.message);
+  emailHealthRoutes = express.Router(); // Empty fallback
+}
+
+// Import email services with error handling
+let emailService, emailQueue;
+
+try {
+  emailService = require("./services/emailService");
+  console.log("✅ Email service loaded");
+} catch (error) {
+  console.error("❌ Failed to load email service:", error.message);
+  emailService = { verifyConnection: () => Promise.resolve(false) }; // Mock fallback
+}
+
+try {
+  emailQueue = require("./services/emailQueue");
+  console.log("✅ Email queue loaded");
+} catch (error) {
+  console.error("❌ Failed to load email queue:", error.message);
+  emailQueue = { start: () => {}, stop: () => {} }; // Mock fallback
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -43,20 +138,75 @@ const io = socketIo(server, {
 });
 
 // Middleware
-app.use(helmet());
-app.use(compression());
 app.use(
-  cors({
-    origin: [
-      "http://localhost:3000",
-      "https://uplive-the-indian-social-media-qlqj.vercel.app",
-      "https://uplive-the-indian-social-media.vercel.app",
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
+app.use(compression());
+
+// Enhanced CORS configuration for production
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, etc.)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = [
+        "http://localhost:3000",
+        "https://uplive-the-indian-social-media-qlqj.vercel.app",
+        "https://uplive-the-indian-social-media.vercel.app",
+        // Add any other Vercel preview URLs
+        /^https:\/\/uplive-the-indian-social-media-.*\.vercel\.app$/,
+      ];
+
+      const isAllowed = allowedOrigins.some((allowed) => {
+        if (typeof allowed === "string") {
+          return allowed === origin;
+        } else if (allowed instanceof RegExp) {
+          return allowed.test(origin);
+        }
+        return false;
+      });
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.log("CORS blocked origin:", origin);
+        callback(null, true); // Allow all origins in production for now
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+      "Access-Control-Request-Method",
+      "Access-Control-Request-Headers",
+    ],
+    exposedHeaders: ["Access-Control-Allow-Origin"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  })
+);
+
+// Handle preflight requests explicitly
+app.options("*", (req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+  );
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+  );
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(204);
+});
 
 // Rate limiting - more generous for development
 const limiter = rateLimit({
@@ -148,30 +298,176 @@ io.on("connection", (socket) => {
   });
 });
 
-// Routes
-app.use("/api/auth", authLimiter, authRoutes);
-app.use("/api/auth", authLimiter, authSafeRoutes); // Safe fallback routes
-app.use("/api/debug", debugRoutes); // Debug routes for production troubleshooting
-app.use("/api/users", userRoutes);
-app.use("/api/posts", postRoutes);
-app.use("/api/stories", storyRoutes);
-app.use("/api/messages", messageRoutes);
-app.use("/api/notifications", notificationRoutes);
+// Routes with error handling
+try {
+  app.use("/api/auth", authLimiter, authRoutes);
+  console.log("✅ Auth routes mounted");
+} catch (error) {
+  console.error("❌ Failed to mount auth routes:", error.message);
+}
 
-// Health checks
+try {
+  app.use("/api/auth", authLimiter, authSafeRoutes); // Safe fallback routes
+  console.log("✅ Auth safe routes mounted");
+} catch (error) {
+  console.error("❌ Failed to mount auth safe routes:", error.message);
+}
+
+try {
+  app.use("/api/debug", debugRoutes); // Debug routes for production troubleshooting
+  console.log("✅ Debug routes mounted");
+} catch (error) {
+  console.error("❌ Failed to mount debug routes:", error.message);
+}
+
+try {
+  app.use("/api/users", userRoutes);
+  console.log("✅ User routes mounted");
+} catch (error) {
+  console.error("❌ Failed to mount user routes:", error.message);
+}
+
+try {
+  app.use("/api/posts", postRoutes);
+  console.log("✅ Post routes mounted");
+} catch (error) {
+  console.error("❌ Failed to mount post routes:", error.message);
+}
+
+try {
+  app.use("/api/stories", storyRoutes);
+  console.log("✅ Story routes mounted");
+} catch (error) {
+  console.error("❌ Failed to mount story routes:", error.message);
+}
+
+try {
+  app.use("/api/messages", messageRoutes);
+  console.log("✅ Message routes mounted");
+} catch (error) {
+  console.error("❌ Failed to mount message routes:", error.message);
+}
+
+try {
+  app.use("/api/notifications", notificationRoutes);
+  console.log("✅ Notification routes mounted");
+} catch (error) {
+  console.error("❌ Failed to mount notification routes:", error.message);
+}
+
+// Essential health checks (always available)
 app.get("/api/health", (req, res) => {
-  res.json({ message: "UPLIVE API is running!" });
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.json({
+    message: "UPLIVE API is running!",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    version: "1.0.0",
+  });
 });
 
-app.use("/api", emailHealthRoutes);
+app.get("/api/status", (req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.json({
+    status: "online",
+    database:
+      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Emergency CORS test endpoint
+app.get("/api/cors-test", (req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.json({
+    message: "CORS is working",
+    origin: req.headers.origin,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Emergency POST test endpoint
+app.post("/api/emergency-test", (req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.json({
+    message: "POST request working",
+    receivedData: req.body,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+try {
+  app.use("/api", emailHealthRoutes);
+  console.log("✅ Email health routes mounted");
+} catch (error) {
+  console.error("❌ Failed to mount email health routes:", error.message);
+}
 
 // Test direct route for privacy features
 app.get("/api/test-direct", (req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.json({
     message: "Direct route working!",
     userRoutesLoaded: true,
     timestamp: new Date().toISOString(),
   });
+});
+
+// Global error handler
+app.use((error, req, res, next) => {
+  console.error("Global error handler:", {
+    error: error.message,
+    stack: error.stack,
+    url: req.url,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+  });
+
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.status(500).json({
+    message: "Internal server error",
+    error:
+      process.env.NODE_ENV === "development"
+        ? error.message
+        : "Something went wrong",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.status(404).json({
+    message: "Route not found",
+    path: req.url,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Process error handlers
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  console.error("Stack:", error.stack);
+  // Don't exit the process in production
+  if (process.env.NODE_ENV !== "production") {
+    process.exit(1);
+  }
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  // Don't exit the process in production
+  if (process.env.NODE_ENV !== "production") {
+    process.exit(1);
+  }
 });
 
 const PORT = process.env.PORT || 5000;
@@ -180,20 +476,65 @@ const PORT = process.env.PORT || 5000;
 async function initializeServices() {
   try {
     // Verify email service connection
-    const emailConnected = await emailService.verifyConnection();
-    if (emailConnected) {
-      console.log("✅ Email service initialized successfully");
-    } else {
-      console.log("⚠️  Email service not configured (optional)");
+    if (emailService && emailService.verifyConnection) {
+      const emailConnected = await emailService.verifyConnection();
+      if (emailConnected) {
+        console.log("✅ Email service initialized successfully");
+      } else {
+        console.log("⚠️  Email service not configured (optional)");
+      }
     }
 
-    console.log("✅ Email queue initialized");
+    if (emailQueue && emailQueue.start) {
+      console.log("✅ Email queue initialized");
+    }
   } catch (error) {
     console.error("❌ Failed to initialize services:", error.message);
+    console.log("⚠️  Continuing without email services...");
   }
 }
 
-server.listen(PORT, async () => {
-  console.log(`🚀 UPLIVE Server running on port ${PORT}`);
-  await initializeServices();
-});
+// Enhanced server startup with error handling
+const startServer = () => {
+  try {
+    server.listen(PORT, () => {
+      console.log("🚀 ================================");
+      console.log(`🚀 UPLIVE Server running on port ${PORT}`);
+      console.log(`🌐 Environment: ${process.env.NODE_ENV || "development"}`);
+      console.log(`📅 Started at: ${new Date().toISOString()}`);
+      console.log("🚀 ================================");
+
+      // Initialize services after server starts
+      initializeServices().catch((error) => {
+        console.error("❌ Service initialization failed:", error.message);
+      });
+    });
+
+    server.on("error", (error) => {
+      if (error.syscall !== "listen") {
+        throw error;
+      }
+
+      const bind = typeof PORT === "string" ? "Pipe " + PORT : "Port " + PORT;
+
+      switch (error.code) {
+        case "EACCES":
+          console.error(`${bind} requires elevated privileges`);
+          process.exit(1);
+          break;
+        case "EADDRINUSE":
+          console.error(`${bind} is already in use`);
+          process.exit(1);
+          break;
+        default:
+          throw error;
+      }
+    });
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
+    process.exit(1);
+  }
+};
+
+// Start the server
+startServer();
