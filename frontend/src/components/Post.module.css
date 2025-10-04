@@ -80,6 +80,13 @@
     margin-left: 0;
     margin-right: 0;
     max-width: var(--post-max-width-mobile);
+    background-color: #ffffff !important; /* Force white background on mobile */
+    color: #262626 !important; /* Force dark text on mobile */
+    -webkit-background-color: #ffffff !important;
+    /* Additional mobile fixes */
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -104,11 +111,26 @@
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: none;
+  background-color: #ffffff !important; /* Force white background */
+  color: #262626 !important; /* Force dark text */
+  position: relative;
+  z-index: 1;
+  /* Fix for mobile devices with black background issues */
+  -webkit-background-color: #ffffff !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 @media (max-width: 767px) {
   .postHeader {
     padding: 8px 12px;
+    background-color: #ffffff !important; /* Ensure white background on mobile */
+    -webkit-background-color: #ffffff !important;
+    color: #262626 !important;
+    /* Additional mobile fixes */
+    box-shadow: none;
+    border: none;
+    outline: none;
   }
 }
 
@@ -363,12 +385,30 @@
   padding: 12px 16px 8px;
   flex-wrap: wrap;
   gap: 8px;
+  background-color: #ffffff !important; /* Force white background */
+  color: #262626 !important; /* Force dark text */
+  position: relative;
+  z-index: 1;
+  /* Fix for mobile devices with black background issues */
+  -webkit-background-color: #ffffff !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 @media (max-width: 767px) {
   .interactionBar {
     padding: 8px 12px 4px;
     gap: 4px;
+    background-color: #ffffff !important; /* Ensure white background on mobile */
+    -webkit-background-color: #ffffff !important;
+    color: #262626 !important;
+    /* Additional mobile fixes */
+    box-shadow: none;
+    border: none;
+    outline: none;
+    /* Prevent any webkit styling overrides */
+    -webkit-appearance: none;
+    appearance: none;
   }
 }
 
@@ -377,12 +417,16 @@
   align-items: center;
   gap: 4px;
   flex: 1;
+  background-color: transparent !important;
+  -webkit-background-color: transparent !important;
 }
 
 .secondaryActions {
   display: flex;
   align-items: center;
   gap: 8px;
+  background-color: transparent !important;
+  -webkit-background-color: transparent !important;
 }
 
 @media (max-width: 480px) {
@@ -403,6 +447,15 @@
   outline: none !important;
   border: none !important;
   background-color: transparent !important;
+  /* Mobile-specific fixes */
+  -webkit-background-color: transparent !important;
+  -webkit-appearance: none;
+  appearance: none;
+  /* Prevent touch highlighting */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .actionButton:hover {
@@ -495,6 +548,9 @@
   gap: 8px;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  background-color: #ffffff !important; /* Force white background */
+  color: #262626 !important; /* Force dark text */
+  -webkit-background-color: #ffffff !important;
 }
 
 @media (max-width: 767px) {
