@@ -77,25 +77,42 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
       setChatUser(selectedUser);
       // Reset message count ref when switching conversations
       lastMessageCountRef.current = 0;
-      // Scroll to bottom when opening a new conversation
+      
+      // Aggressive scroll to bottom when opening a new conversation (for production)
+      setTimeout(() => scrollToBottom(true), 100);
+      setTimeout(() => scrollToBottom(false), 300);
+      setTimeout(() => scrollToBottom(true), 600);
       setTimeout(() => {
-        scrollToBottom();
-      }, 500);
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }, 1000);
     }
   }, [selectedUser]);
 
-  // Simple scroll to bottom function
-  const scrollToBottom = () => {
+  // Robust scroll to bottom function for production
+  const scrollToBottom = (immediate = false) => {
+    const scrollBehavior = immediate ? 'auto' : 'smooth';
+    
+    // Multiple scroll methods for better compatibility
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ 
-        behavior: 'smooth',
+        behavior: scrollBehavior,
         block: 'end',
         inline: 'nearest'
       });
     }
-    // Also ensure the messages container stays scrolled to bottom
+    
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      const container = messagesContainerRef.current;
+      if (immediate) {
+        container.scrollTop = container.scrollHeight;
+      } else {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
     }
   };
 
@@ -120,10 +137,22 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
     // Auto-scroll on initial load or any new message
     if (isInitialLoad || isNewMessage) {
       console.log('Auto-scrolling to bottom...');
-      // Use multiple timeouts to ensure scroll works even with slow rendering
-      setTimeout(scrollToBottom, 100);
-      setTimeout(scrollToBottom, 300);
-      setTimeout(scrollToBottom, 500);
+      
+      // Immediate scroll first (important for production)
+      scrollToBottom(true);
+      
+      // Then multiple smooth scrolls with increasing delays
+      setTimeout(() => scrollToBottom(false), 50);
+      setTimeout(() => scrollToBottom(true), 200);
+      setTimeout(() => scrollToBottom(false), 500);
+      setTimeout(() => scrollToBottom(true), 1000);
+      
+      // Force scroll after longer delay for slow networks
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }, 2000);
     }
   }, [messages]);
 
@@ -152,6 +181,15 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
           
           const messagesResponse = await messagesApi.getMessages(targetUser.id);
           setMessages(messagesResponse.data || []);
+          
+          // Force scroll to bottom after messages are loaded (critical for production)
+          setTimeout(() => scrollToBottom(true), 100);
+          setTimeout(() => scrollToBottom(true), 500);
+          setTimeout(() => {
+            if (messagesContainerRef.current) {
+              messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+            }
+          }, 1000);
           
           // Fetch conversation status for "seen" indicator
           try {
@@ -189,6 +227,13 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
         }
       } finally {
         setLoading(false);
+        
+        // Final scroll attempt after everything is loaded (critical for production)
+        setTimeout(() => {
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          }
+        }, 1500);
       }
     };
 
@@ -244,8 +289,9 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
       // Hide "Seen" indicator after sending new message (until other user reads it)
       setShowSeen(false);
       
-      // Force scroll to bottom when current user sends a message
-      setTimeout(scrollToBottom, 100);
+      // Force scroll to bottom when current user sends a message (robust for production)
+      setTimeout(() => scrollToBottom(true), 50);
+      setTimeout(() => scrollToBottom(true), 200);
       
       toast.success('Message sent');
     } catch (error: any) {
@@ -272,8 +318,9 @@ const Chat: React.FC<ChatProps> = ({ selectedUser, onBackToList, onMessagesRead,
       // Hide "Seen" indicator after sending new message
       setShowSeen(false);
       
-      // Force scroll to bottom when current user sends media
-      setTimeout(scrollToBottom, 100);
+      // Force scroll to bottom when current user sends media (robust for production)
+      setTimeout(() => scrollToBottom(true), 50);
+      setTimeout(() => scrollToBottom(true), 200);
       
       toast.success('Media sent');
     } catch (error: any) {
