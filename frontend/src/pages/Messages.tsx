@@ -25,6 +25,7 @@ import { useAuth } from '../context/AuthContext';
 import { messagesApi, usersApi } from '../services/api';
 import { Conversation, User } from '../types';
 import Chat from '../components/Chat';
+import ConversationListItem from '../components/ConversationListItem';
 import toast from 'react-hot-toast';
 
 const Messages: React.FC = () => {
@@ -298,8 +299,16 @@ const Messages: React.FC = () => {
                           </Avatar>
                         </ListItemAvatar>
                         <ListItemText
-                          primary={user.username}
-                          secondary={user.fullName}
+                          primary={
+                            <Typography variant="body1" component="span">
+                              {user.username}
+                            </Typography>
+                          }
+                          secondary={
+                            <Typography variant="body2" color="text.secondary" component="span">
+                              {user.fullName}
+                            </Typography>
+                          }
                         />
                       </ListItemButton>
                     </ListItem>
@@ -344,22 +353,13 @@ const Messages: React.FC = () => {
               ) : (
                 <List sx={{ pt: 0 }}>
                   {conversations.map((conversation) => (
-                    <ListItem key={conversation.user.id} disablePadding>
-                      <ListItemButton 
-                        onClick={() => handleConversationClick(conversation)}
-                        selected={selectedUser?.id === conversation.user.id}
-                      >
-                        <ListItemAvatar>
-                          <Avatar src={conversation.user.profilePicture} alt={conversation.user.username}>
-                            <PersonIcon />
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={conversation.user.username}
-                          secondary="Click to open chat"
-                        />
-                      </ListItemButton>
-                    </ListItem>
+                    <ConversationListItem
+                      key={conversation.user.id}
+                      conversation={conversation}
+                      currentUser={currentUser!}
+                      selectedUser={selectedUser}
+                      onClick={handleConversationClick}
+                    />
                   ))}
                 </List>
               )}

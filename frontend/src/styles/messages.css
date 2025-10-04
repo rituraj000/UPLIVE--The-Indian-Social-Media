@@ -1,0 +1,148 @@
+/* Message List Styles for UPLIVE */
+
+/* Global message list styling */
+.message-list-container {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Conversation item states */
+.conversation-item {
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.conversation-item:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.conversation-item.selected {
+  background-color: rgba(224, 64, 95, 0.08);
+  border-left: 3px solid #E4405F;
+}
+
+/* Unread message state */
+.conversation-item.unread {
+  background-color: rgba(0, 122, 255, 0.02);
+}
+
+.conversation-item.unread .sender-name,
+.conversation-item.unread .message-preview {
+  font-weight: 700;
+  color: #000;
+}
+
+.conversation-item.unread .unread-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #007AFF;
+  border-radius: 50%;
+  margin-left: 8px;
+}
+
+/* Read message state */
+.conversation-item.read .sender-name,
+.conversation-item.read .message-preview {
+  font-weight: 400;
+  color: #65676B;
+}
+
+.conversation-item.read .unread-indicator {
+  display: none;
+}
+
+/* Unread count badge */
+.unread-badge {
+  background-color: #007AFF !important;
+  color: white;
+  font-weight: 600;
+  min-width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
+  border-radius: 9px;
+}
+
+/* Message preview text */
+.message-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+/* Timestamp styling */
+.message-timestamp {
+  font-size: 0.75rem;
+  color: #8A8D91;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.conversation-item.unread .message-timestamp {
+  color: #007AFF;
+  font-weight: 600;
+}
+
+/* Avatar styling */
+.conversation-avatar {
+  width: 50px !important;
+  height: 50px !important;
+  border: 2px solid transparent;
+}
+
+.conversation-item.unread .conversation-avatar {
+  border-color: #007AFF;
+}
+
+/* Search results styling */
+.search-results .conversation-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.search-results .conversation-item:hover {
+  background-color: rgba(228, 64, 95, 0.05);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .conversation-item.unread .sender-name,
+  .conversation-item.unread .message-preview {
+    color: #FFFFFF;
+  }
+  
+  .conversation-item.read .sender-name,
+  .conversation-item.read .message-preview {
+    color: #B0B3B8;
+  }
+  
+  .conversation-item.unread {
+    background-color: rgba(0, 122, 255, 0.1);
+  }
+  
+  .message-timestamp {
+    color: #B0B3B8;
+  }
+  
+  .conversation-item.unread .message-timestamp {
+    color: #007AFF;
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .conversation-avatar {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  
+  .message-preview {
+    max-width: 150px;
+  }
+  
+  .unread-badge {
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.65rem;
+  }
+}
