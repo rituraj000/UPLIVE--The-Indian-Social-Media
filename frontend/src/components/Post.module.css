@@ -132,6 +132,16 @@
     border: none;
     outline: none;
   }
+  
+  /* Ensure username is visible on mobile */
+  .postHeader .username {
+    color: #262626 !important;
+  }
+  
+  /* Ensure options menu is visible on mobile */
+  .postHeader .optionsMenu {
+    color: #262626 !important;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -165,7 +175,7 @@
 
 .username {
   font-weight: 600 !important;
-  color: #262626 !important;
+  color: #262626 !important; /* Dark text on white background */
   cursor: pointer;
   font-size: 14px !important;
   line-height: 18px !important;
@@ -192,8 +202,9 @@
 }
 
 .optionsMenu {
-  color: #262626 !important;
+  color: #262626 !important; /* Dark icon on white background */
   padding: 8px !important;
+  background-color: transparent !important;
 }
 
 /* Follow Button Styles */
@@ -410,6 +421,17 @@
     -webkit-appearance: none;
     appearance: none;
   }
+  
+  /* Ensure action buttons are visible on mobile */
+  .interactionBar .actionButton {
+    color: #262626 !important;
+  }
+  
+  /* Ensure support button text is white on colored background */
+  .interactionBar .supportButton {
+    color: #ffffff !important;
+    background-color: #ff6b35 !important;
+  }
 }
 
 .primaryActions {
@@ -441,7 +463,7 @@
 
 .actionButton {
   padding: 8px !important;
-  color: #262626 !important;
+  color: #262626 !important; /* Dark icons on white background */
   transition: transform 0.2s ease, color 0.2s ease;
   /* Remove all focus and ripple effects */
   outline: none !important;
@@ -557,6 +579,21 @@
   .postContent {
     padding: 0 12px 12px;
     gap: 6px;
+    background-color: #ffffff !important;
+    color: #262626 !important;
+  }
+  
+  /* Ensure all text in post content is visible */
+  .postContent .likeMetric,
+  .postContent .caption,
+  .postContent .commentCount,
+  .postContent .timestamp {
+    color: #262626 !important;
+  }
+  
+  /* Ensure username in caption is visible */
+  .postContent .usernameInCaption {
+    color: #262626 !important;
   }
 }
 
@@ -724,28 +761,29 @@
   outline-offset: 2px;
 }
 
-/* Dark mode support (optional) */
+/* Dark mode support (optional) - but override for light theme */
 @media (prefers-color-scheme: dark) {
   .post {
-    background-color: #000000;
-    border-color: #262626;
+    background-color: #ffffff !important; /* Force white even in dark mode */
+    border-color: #e0e0e0 !important;
   }
   
   .username,
   .likeMetric,
   .caption,
   .usernameInCaption,
-  .actionButton {
-    color: #ffffff !important;
+  .actionButton,
+  .optionsMenu {
+    color: #262626 !important; /* Force dark text even in dark mode */
   }
   
   .location,
   .commentCount,
   .timestamp {
-    color: #a8a8a8 !important;
+    color: #8e8e8e !important; /* Gray text for secondary info */
   }
   
   .showMore {
-    color: #a8a8a8;
+    color: #8e8e8e !important;
   }
 }
