@@ -158,7 +158,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [location.pathname]);
 
   const handleNavigation = (path: string) => {
-    navigate(path);
+    // Check if user is clicking on the same page they're already on
+    const currentPath = location.pathname;
+    const isCurrentPage = currentPath === path || 
+                         (path === '/' && currentPath === '/') ||
+                         (path === '/messages' && currentPath.startsWith('/messages'));
+    
+    // If clicking on Home or Messages and already on that page, refresh to get latest data
+    if (isCurrentPage && (path === '/' || path === '/messages')) {
+      console.log('Refreshing page for latest content:', path);
+      // Add a small delay to provide visual feedback
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    } else {
+      // Normal navigation for different pages
+      navigate(path);
+    }
   };
 
   const isActive = (path: string) => location.pathname === path;
