@@ -36,7 +36,6 @@ import {
   BookmarkBorder as BookmarkBorderIcon
 } from '@mui/icons-material';
 import PasswordChange from '../components/PasswordChange';
-import WalletSection from '../components/WalletSection';
 import { useAuth } from '../context/AuthContext';
 import { usersApi, notificationsApi } from '../services/api';
 import { User } from '../types';
@@ -278,9 +277,6 @@ const Settings: React.FC = () => {
           </List>
         </Paper>
       )}
-
-      {/* Wallet Section */}
-      <WalletSection />
 
       {/* Saved Posts Section */}
       <Paper sx={{ 

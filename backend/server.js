@@ -18,8 +18,7 @@ let authRoutes,
   messageRoutes,
   notificationRoutes,
   healthRoutes,
-  emailHealthRoutes,
-  walletRoutes;
+  emailHealthRoutes;
 
 try {
   authRoutes = require("./routes/auth");
@@ -99,14 +98,6 @@ try {
 } catch (error) {
   console.error("❌ Failed to load email health routes:", error.message);
   emailHealthRoutes = express.Router(); // Empty fallback
-}
-
-try {
-  walletRoutes = require("./routes/wallet");
-  console.log("✅ Wallet routes loaded");
-} catch (error) {
-  console.error("❌ Failed to load wallet routes:", error.message);
-  walletRoutes = express.Router(); // Empty fallback
 }
 
 // Import email services with error handling
@@ -362,13 +353,6 @@ try {
   console.log("✅ Notification routes mounted");
 } catch (error) {
   console.error("❌ Failed to mount notification routes:", error.message);
-}
-
-try {
-  app.use("/api/wallet", walletRoutes);
-  console.log("✅ Wallet routes mounted");
-} catch (error) {
-  console.error("❌ Failed to mount wallet routes:", error.message);
 }
 
 // Essential health checks (always available)

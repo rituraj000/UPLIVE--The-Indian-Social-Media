@@ -19,9 +19,7 @@ const GradientAvatarWrapper = styled('div')<GradientAvatarWrapperProps>(({ hasSt
   height: hasStory ? size + 6 : size,
 }));
 
-const StyledAvatar = styled(MuiAvatar, {
-  shouldForwardProp: (prop) => prop !== 'avatarSize',
-})<{ avatarSize: number }>(({ avatarSize }) => ({
+const StyledAvatar = styled(MuiAvatar)<{ avatarSize: number }>(({ avatarSize }) => ({
   width: avatarSize,
   height: avatarSize,
   border: '2px solid #1F1F35',

@@ -4,15 +4,7 @@ import {
   Box,
   CircularProgress,
   Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  InputAdornment,
 } from '@mui/material';
-import { CurrencyRupee as CurrencyRupeeIcon } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { postsApi, usersApi, followApi } from '../services/api';
 import { Post as PostType, User } from '../types';
@@ -33,13 +25,6 @@ const PostFeed: React.FC = () => {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set());
-  
-  // Support dialog state
-  const [supportDialogOpen, setSupportDialogOpen] = useState(false);
-  const [supportAmount, setSupportAmount] = useState('');
-  const [supportMessage, setSupportMessage] = useState('');
-  const [supportLoading, setSupportLoading] = useState(false);
-  const [supportPost, setSupportPost] = useState<PostType | null>(null);
 
   // Fetch all posts from all users
   const fetchAllPosts = useCallback(async () => {
@@ -194,41 +179,10 @@ const PostFeed: React.FC = () => {
     }
     
     const post = posts.find(p => p.id === postId);
-    if (!post) return;
-    
-    // Don't allow supporting own posts
-    if (post.user.id === currentUser.id) {
-      toast.error('You cannot support your own post');
-      return;
+    if (post) {
+      toast.success(`Support feature coming soon! Support ${post.user.username} 💰`);
+      console.log('Support clicked for post:', postId, 'by user:', post.user.username);
     }
-    
-    setSupportPost(post);
-    setSupportDialogOpen(true);
-    setSupportAmount('');
-    setSupportMessage('');
-  };
-
-  // Handle support form submission - Demo version
-  const handleSupportSubmit = async () => {
-    if (!supportPost || !currentUser || !supportAmount) return;
-
-    const amount = parseFloat(supportAmount);
-    if (amount <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
-    }
-
-    if (amount > 10000) {
-      toast.error('Maximum support amount is ₹10,000');
-      return;
-    }
-
-    // Demo functionality - show coming soon message
-    toast.success(`🎉 Support feature is coming soon! You tried to support @${supportPost.user.username} with ₹${amount}.`);
-    setSupportDialogOpen(false);
-    setSupportAmount('');
-    setSupportMessage('');
-    setSupportPost(null);
   };
 
   // Handle save/unsave post
@@ -410,72 +364,6 @@ const PostFeed: React.FC = () => {
           setSelectedPost(null);
         }}
       />
-
-      {/* Support Dialog */}
-      <Dialog 
-        open={supportDialogOpen} 
-        onClose={() => setSupportDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          Support @{supportPost?.user.username}
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Send coins to support this amazing content creator!
-          </Typography>
-          
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Amount to support"
-            type="number"
-            fullWidth
-            variant="outlined"
-            value={supportAmount}
-            onChange={(e) => setSupportAmount(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <CurrencyRupeeIcon />
-                </InputAdornment>
-              ),
-            }}
-            inputProps={{ min: 1, max: 10000 }}
-            helperText="Minimum: ₹1, Maximum: ₹10,000"
-            sx={{ mb: 2 }}
-          />
-          
-          <TextField
-            margin="dense"
-            label="Support message (optional)"
-            multiline
-            rows={3}
-            fullWidth
-            variant="outlined"
-            value={supportMessage}
-            onChange={(e) => setSupportMessage(e.target.value)}
-            placeholder="Leave a supportive message..."
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setSupportDialogOpen(false)}
-            disabled={supportLoading}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSupportSubmit}
-            variant="contained"
-            disabled={!supportAmount || parseFloat(supportAmount) <= 0}
-            startIcon={<CurrencyRupeeIcon />}
-          >
-            Support ₹{supportAmount || '0'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

@@ -18,8 +18,6 @@ import {
   Button,
   TextField,
   Chip,
-  InputAdornment,
-  CircularProgress,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -31,7 +29,6 @@ import {
   ChatBubbleOutline as CommentIcon,
   Share as ShareIcon,
   MonetizationOn as SupportIcon,
-  CurrencyRupee as CurrencyRupeeIcon,
 } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { postsApi } from '../services/api';
@@ -67,12 +64,6 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
-  
-  // Support modal states
-  const [supportDialogOpen, setSupportDialogOpen] = useState(false);
-  const [supportAmount, setSupportAmount] = useState('');
-  const [supportMessage, setSupportMessage] = useState('');
-  const [supportLoading, setSupportLoading] = useState(false);
 
   // Update local post state when prop changes
   useEffect(() => {
@@ -176,32 +167,8 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
   };
 
   const handleSupportClick = () => {
-    if (!post || !currentUserId || isOwner) return;
-    
-    setSupportDialogOpen(true);
-    setSupportAmount('');
-    setSupportMessage('');
-  };
-
-  const handleSupportSubmit = async () => {
-    if (!post || !currentUserId || !supportAmount) return;
-
-    const amount = parseFloat(supportAmount);
-    if (amount <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
-    }
-
-    if (amount > 10000) {
-      toast.error('Maximum support amount is ₹10,000');
-      return;
-    }
-
-    // Demo functionality - show coming soon message
-    toast.success(`🎉 Support feature is coming soon! You tried to support @${post.user.username} with ₹${amount}.`);
-    setSupportDialogOpen(false);
-    setSupportAmount('');
-    setSupportMessage('');
+    if (!post) return;
+    toast.success(`Support feature coming soon! Support @${post.user.username} 💰`);
   };
 
   const handleCommentAdded = (postId: string) => {
@@ -397,12 +364,10 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   </IconButton>
                 )}
                 
-                {/* Support Button - Hide when viewing own posts */}
-                {!isOwner && (
-                  <IconButton onClick={handleSupportClick} color="primary">
-                    <SupportIcon />
-                  </IconButton>
-                )}
+                {/* Support Button */}
+                <IconButton onClick={handleSupportClick} color="primary">
+                  <SupportIcon />
+                </IconButton>
               </Box>
               
               {/* Post Stats */}
@@ -505,66 +470,6 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
           post={post}
         />
       )}
-
-      {/* Support Dialog */}
-      <Dialog open={supportDialogOpen} onClose={() => setSupportDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <SupportIcon color="primary" />
-            Support @{post?.user.username}
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Show your support by sending coins to this creator
-          </Typography>
-          
-          <TextField
-            autoFocus
-            fullWidth
-            label="Amount"
-            type="number"
-            value={supportAmount}
-            onChange={(e) => setSupportAmount(e.target.value)}
-            margin="normal"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <CurrencyRupeeIcon />
-                </InputAdornment>
-              ),
-            }}
-            helperText="Minimum: ₹1, Maximum: ₹10,000"
-            inputProps={{ min: 1, max: 10000 }}
-          />
-          
-          <TextField
-            fullWidth
-            label="Message (Optional)"
-            multiline
-            rows={2}
-            value={supportMessage}
-            onChange={(e) => setSupportMessage(e.target.value)}
-            margin="normal"
-            placeholder="Add a supportive message..."
-            inputProps={{ maxLength: 200 }}
-            helperText={`${supportMessage.length}/200`}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSupportDialogOpen(false)} disabled={supportLoading}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSupportSubmit}
-            disabled={supportLoading || !supportAmount}
-            startIcon={supportLoading ? <CircularProgress size={16} /> : <SupportIcon />}
-          >
-            {supportLoading ? 'Sending...' : `Support with ₹${supportAmount || '0'}`}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </>
   );
 };
