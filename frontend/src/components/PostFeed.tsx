@@ -4,7 +4,15 @@ import {
   Box,
   CircularProgress,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
+import { CurrencyRupee as CurrencyRupeeIcon } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { postsApi, usersApi, followApi } from '../services/api';
 import { Post as PostType, User } from '../types';
@@ -25,71 +33,185 @@ const PostFeed: React.FC = () => {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set());
+  
+  // Support dialog state
+  const [supportDialogOpen, setSupportDialogOpen] = useState(false);
+  const [supportAmount, setSupportAmount] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [supportPost, setSupportPost] = useState<PostType | null>(null);
 
-  // Fetch all posts from all users
+  // Fetch all posts from all users - Demo version
   const fetchAllPosts = useCallback(async () => {
     try {
-      console.log('🔍 PostFeed: Starting to fetch all posts...');
+      console.log('🔍 PostFeed: Starting to fetch demo posts...');
       console.log('👤 Current user:', currentUser);
       setLoading(true);
       
-      const response = await postsApi.getAllPosts();
-      console.log('📡 API Response:', {
-        status: response.status,
-        dataType: typeof response.data,
-        isArray: Array.isArray(response.data),
-        postCount: Array.isArray(response.data) ? response.data.length : 'Not array',
-        firstPost: response.data?.[0] ? {
-          id: response.data[0].id,
-          user: response.data[0].user?.username,
-          caption: response.data[0].caption?.substring(0, 50)
-        } : 'No posts'
+      // Create demo posts data
+      const demoPosts: PostType[] = [
+        {
+          id: '1',
+          user: {
+            id: 'demo_user_1',
+            username: 'alex_photo',
+            email: 'alex@demo.com',
+            fullName: 'Alex Photography',
+            bio: 'Professional photographer',
+            profilePicture: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face',
+            isPrivate: false,
+            isVerified: true,
+            followers: [],
+            following: [],
+            posts: [],
+            savedPosts: [],
+            followerCount: 1250,
+            followingCount: 180,
+            postCount: 23,
+            lastSeen: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          caption: 'Just captured this amazing sunset! The colors were absolutely perfect and I couldn\'t be happier with how this turned out. What do you think? 📸✨ #photography #sunset #nature #art',
+          media: [{
+            url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&h=750&fit=crop&crop=face',
+            type: 'image' as const,
+            publicId: 'demo_image_1'
+          }],
+          likes: [
+            { id: '2', username: 'friend_1' } as any,
+            { id: '3', username: 'friend_2' } as any,
+          ],
+          comments: [],
+          location: { name: 'Golden Gate Bridge' },
+          tags: [],
+          hashtags: ['photography', 'sunset', 'nature', 'art'],
+          isArchived: false,
+          commentsDisabled: false,
+          likeCount: 47,
+          commentCount: 12,
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          user: {
+            id: 'demo_user_2',
+            username: 'sarah_art',
+            email: 'sarah@demo.com',
+            fullName: 'Sarah Artist',
+            bio: 'Digital artist & creator',
+            profilePicture: 'https://images.unsplash.com/photo-1494790108755-2616b612b494?w=150&h=150&fit=crop&crop=face',
+            isPrivate: false,
+            isVerified: false,
+            followers: [],
+            following: [],
+            posts: [],
+            savedPosts: [],
+            followerCount: 850,
+            followingCount: 120,
+            postCount: 18,
+            lastSeen: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          caption: 'Working on my latest digital art piece! This took me about 6 hours to complete. Love experimenting with new styles! 🎨 #digitalart #creative #artwork #artist',
+          media: [{
+            url: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=600&h=750&fit=crop',
+            type: 'image' as const,
+            publicId: 'demo_image_2'
+          }],
+          likes: [
+            { id: '1', username: 'alex_photo' } as any,
+            { id: '4', username: 'mike_dev' } as any,
+            { id: '5', username: 'jane_music' } as any,
+          ],
+          comments: [],
+          location: { name: 'Art Studio' },
+          tags: [],
+          hashtags: ['digitalart', 'creative', 'artwork', 'artist'],
+          isArchived: false,
+          commentsDisabled: false,
+          likeCount: 23,
+          commentCount: 8,
+          createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '3',
+          user: {
+            id: 'demo_user_3',
+            username: 'mike_dev',
+            email: 'mike@demo.com',
+            fullName: 'Mike Developer',
+            bio: 'Full stack developer',
+            profilePicture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+            isPrivate: false,
+            isVerified: false,
+            followers: [],
+            following: [],
+            posts: [],
+            savedPosts: [],
+            followerCount: 650,
+            followingCount: 200,
+            postCount: 15,
+            lastSeen: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          caption: 'Late night coding session! Building something amazing. Coffee is my best friend tonight ☕️💻 #coding #developer #latenight #coffee',
+          media: [{
+            url: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&h=750&fit=crop',
+            type: 'image' as const,
+            publicId: 'demo_image_3'
+          }],
+          likes: [
+            { id: '1', username: 'alex_photo' } as any,
+            { id: '2', username: 'sarah_art' } as any,
+          ],
+          comments: [],
+          location: { name: 'Home Office' },
+          tags: [],
+          hashtags: ['coding', 'developer', 'latenight', 'coffee'],
+          isArchived: false,
+          commentsDisabled: false,
+          likeCount: 15,
+          commentCount: 5,
+          createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      ];
+      
+      console.log('📡 Demo Posts created:', {
+        postCount: demoPosts.length,
+        posts: demoPosts.map(p => ({ id: p.id, user: p.user.username, caption: (p.caption || '').substring(0, 30) + '...' }))
       });
       
-      setPosts(response.data);
+      setPosts(demoPosts);
       
       // Set liked and saved posts from current user data
       if (currentUser) {
         const userLikedPosts = new Set<string>();
         const userSavedPosts = new Set<string>();
         
-        response.data.forEach((post: PostType) => {
-          if (post.likes.some((user: User) => user.id === currentUser.id)) {
+        // Demo: simulate some liked/saved posts
+        demoPosts.forEach((post: PostType) => {
+          // Simulate user has liked some posts
+          if (post.likes.some(like => like.username === currentUser.username)) {
             userLikedPosts.add(post.id);
           }
         });
         
-        // Handle savedPosts - they could be ObjectIds (strings) or Post objects
-        if (currentUser.savedPosts && Array.isArray(currentUser.savedPosts)) {
-          currentUser.savedPosts.forEach((savedPost: any) => {
-            // If it's a Post object, use its id; if it's just an ObjectId string, use it directly
-            const postId = typeof savedPost === 'string' ? savedPost : savedPost.id || savedPost._id;
-            if (postId) {
-              userSavedPosts.add(postId);
-            }
-          });
-        }
-        
         setLikedPosts(userLikedPosts);
         setSavedPosts(userSavedPosts);
         
-        // Get current user's following list
-        console.log('🔍 Getting user following list for:', currentUser.username);
-        const userResponse = await usersApi.getProfile(currentUser.username);
-        console.log('👥 Following data:', userResponse.data.following);
-        const following = new Set(userResponse.data.following.map((u: User) => u.id));
-        setFollowingUsers(following);
-        console.log('✅ Following set created with', following.size, 'users');
+        // Demo: set empty following list for now
+        setFollowingUsers(new Set());
       }
       
       console.log('✅ PostFeed loading complete');
     } catch (error: any) {
-      console.error('❌ Error fetching posts:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      });
+      console.error('❌ Error loading demo posts:', error);
       toast.error('Failed to load posts');
     } finally {
       setLoading(false);
@@ -179,10 +301,41 @@ const PostFeed: React.FC = () => {
     }
     
     const post = posts.find(p => p.id === postId);
-    if (post) {
-      toast.success(`Support feature coming soon! Support ${post.user.username} 💰`);
-      console.log('Support clicked for post:', postId, 'by user:', post.user.username);
+    if (!post) return;
+    
+    // Don't allow supporting own posts
+    if (post.user.id === currentUser.id) {
+      toast.error('You cannot support your own post');
+      return;
     }
+    
+    setSupportPost(post);
+    setSupportDialogOpen(true);
+    setSupportAmount('');
+    setSupportMessage('');
+  };
+
+  // Handle support form submission - Demo version
+  const handleSupportSubmit = async () => {
+    if (!supportPost || !currentUser || !supportAmount) return;
+
+    const amount = parseFloat(supportAmount);
+    if (amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    if (amount > 10000) {
+      toast.error('Maximum support amount is ₹10,000');
+      return;
+    }
+
+    // Demo functionality - show coming soon message
+    toast.success(`🎉 Support feature is coming soon! You tried to support @${supportPost.user.username} with ₹${amount}.`);
+    setSupportDialogOpen(false);
+    setSupportAmount('');
+    setSupportMessage('');
+    setSupportPost(null);
   };
 
   // Handle save/unsave post
@@ -364,6 +517,72 @@ const PostFeed: React.FC = () => {
           setSelectedPost(null);
         }}
       />
+
+      {/* Support Dialog */}
+      <Dialog 
+        open={supportDialogOpen} 
+        onClose={() => setSupportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Support @{supportPost?.user.username}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Send coins to support this amazing content creator!
+          </Typography>
+          
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Amount to support"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={supportAmount}
+            onChange={(e) => setSupportAmount(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <CurrencyRupeeIcon />
+                </InputAdornment>
+              ),
+            }}
+            inputProps={{ min: 1, max: 10000 }}
+            helperText="Minimum: ₹1, Maximum: ₹10,000"
+            sx={{ mb: 2 }}
+          />
+          
+          <TextField
+            margin="dense"
+            label="Support message (optional)"
+            multiline
+            rows={3}
+            fullWidth
+            variant="outlined"
+            value={supportMessage}
+            onChange={(e) => setSupportMessage(e.target.value)}
+            placeholder="Leave a supportive message..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setSupportDialogOpen(false)}
+            disabled={supportLoading}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSupportSubmit}
+            variant="contained"
+            disabled={!supportAmount || parseFloat(supportAmount) <= 0}
+            startIcon={<CurrencyRupeeIcon />}
+          >
+            Support ₹{supportAmount || '0'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

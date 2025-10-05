@@ -10,10 +10,10 @@ interface RequestConfigWithMetadata extends InternalAxiosRequestConfig {
   };
 }
 
-// In development, let the proxy in package.json handle the API URL
+// In development, directly connect to backend server
 // In production, use the environment variable or fallback URL
 const API_BASE_URL = process.env.NODE_ENV === 'development' 
-  ? '/api'  // This will be proxied to http://localhost:5000/api via the proxy setting
+  ? 'http://localhost:5000/api'  // Direct connection to backend server in development
   : (process.env.REACT_APP_API_URL || 'https://uplive-the-indian-social-media.onrender.com/api');
 
 const api = axios.create({
@@ -345,6 +345,61 @@ export const notificationsApi = {
   
   followBack: (notificationId: string) => 
     api.post<{ message: string; following?: boolean; requestSent?: boolean }>(`/notifications/${notificationId}/follow-back`),
+};
+
+// Wallet API
+export const walletApi = {
+  getWallet: () => 
+    api.get<{
+      _id: string;
+      user: string;
+      balance: number;
+      currency: string;
+      transactions: Array<{
+        _id: string;
+        type: 'deposit' | 'withdrawal' | 'transfer' | 'payment';
+        amount: number;
+        description: string;
+        status: 'pending' | 'completed' | 'failed';
+        paymentMethod?: string;
+        reference?: string;
+        createdAt: string;
+      }>;
+      isActive: boolean;
+      createdAt: string;
+      updatedAt: string;
+    }>('/wallet'),
+  
+  addMoney: (data: {
+    amount: number;
+    paymentMethod?: string;
+    reference?: string;
+  }) => 
+    api.post<{
+      message: string;
+      wallet: any;
+      transaction: any;
+    }>('/wallet/add-money', data),
+  
+  supportUser: (data: {
+    recipientId: string;
+    amount: number;
+    message?: string;
+  }) => 
+    api.post<{
+      message: string;
+      senderWallet: any;
+      supportAmount: number;
+      transactionRef: string;
+    }>('/wallet/support', data),
+  
+  getTransactions: (page = 1, limit = 20) => 
+    api.get<{
+      transactions: any[];
+      totalCount: number;
+      currentPage: number;
+      totalPages: number;
+    }>(`/wallet/transactions?page=${page}&limit=${limit}`),
 };
 
 export default api;

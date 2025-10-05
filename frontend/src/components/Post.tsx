@@ -370,14 +370,17 @@ const Post: React.FC<PostProps> = ({
         </div>
 
         <div className={styles.secondaryActions}>
-          <Button
-            className={styles.supportButton}
-            startIcon={<SupportIcon fontSize="small" />}
-            onClick={onSupport}
-            disabled={!currentUser}
-          >
-            Support
-          </Button>
+          {/* Only show support button if not viewing own post */}
+          {currentUser && currentUser.id !== post.user.id && (
+            <Button
+              className={styles.supportButton}
+              startIcon={<SupportIcon fontSize="small" />}
+              onClick={onSupport}
+              disabled={!currentUser}
+            >
+              Support
+            </Button>
+          )}
           
           <IconButton 
             className={`${styles.actionButton} ${isSaved ? styles.saved : ''}`}
