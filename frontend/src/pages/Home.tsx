@@ -12,7 +12,7 @@ const Home: React.FC = () => {
     <Container 
       maxWidth="lg" 
       sx={{ 
-        py: 2,
+        py: { xs: 0, md: 2 }, // No vertical padding on mobile
         px: { xs: 0, md: 3 }, // No horizontal padding on mobile
         bgcolor: 'background.default',
         minHeight: '100vh'

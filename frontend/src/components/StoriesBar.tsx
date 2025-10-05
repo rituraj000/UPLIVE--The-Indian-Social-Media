@@ -276,11 +276,12 @@ const StoriesBar: React.FC = () => {
 
   return (
     <Paper elevation={0} sx={{ 
-      mb: 3, 
-      borderRadius: '20px',
+      mb: { xs: 1, md: 3 }, // Small margin bottom on mobile for spacing
+      borderRadius: { xs: 0, md: '20px' }, // No border radius on mobile for full width
       background: 'rgba(31, 31, 53, 0.8)',
       backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      border: { xs: 'none', md: '1px solid rgba(255, 255, 255, 0.1)' }, // No border on mobile
+      borderBottom: { xs: '1px solid rgba(255, 255, 255, 0.1)', md: 'none' }, // Only bottom border on mobile
       overflow: 'hidden'
     }}>
       {/* Stories Container */}

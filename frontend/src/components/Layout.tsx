@@ -483,7 +483,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <Container 
         maxWidth="lg" 
         sx={{ 
-          pt: 2, 
+          pt: { 
+            xs: location.pathname === '/feed' || location.pathname === '/home' || location.pathname === '/' ? 0 : 2, 
+            sm: 2 
+          }, // No top padding on mobile for feed/home pages
           pb: isMobile ? 8 : 4, // Reduced bottom padding for smaller mobile nav
           px: { 
             xs: location.pathname === '/feed' || location.pathname === '/home' || location.pathname === '/' ? 0 : 1, 
