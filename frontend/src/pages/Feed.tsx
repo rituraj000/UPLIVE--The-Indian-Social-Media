@@ -252,13 +252,17 @@ const Feed: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto', mt: 2 }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 3, textAlign: 'center' }}>
+    <Box sx={{ 
+      maxWidth: { xs: '100%', sm: 600 }, // Full width on mobile, 600px on larger screens
+      mx: { xs: 0, sm: 'auto' }, // No horizontal margin on mobile, auto on larger screens
+      mt: 2 
+    }}>
+      <Typography variant="h4" gutterBottom sx={{ mb: 3, textAlign: 'center', px: { xs: 2, sm: 0 } }}>
         Discover Posts
       </Typography>
 
       {posts.length === 0 ? (
-        <Card>
+        <Card sx={{ mx: { xs: 2, sm: 0 } }}>
           <CardContent sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="h6" color="text.secondary">
               No posts available
@@ -269,9 +273,13 @@ const Feed: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 0, sm: 2 } }}>
           {posts.map((post) => (
-            <Card key={post.id} sx={{ mb: 2 }}>
+            <Card key={post.id} sx={{ 
+              mb: { xs: 0, sm: 2 }, // No margin bottom on mobile
+              mx: { xs: 0, sm: 0 }, // No horizontal margin
+              borderRadius: { xs: 0, sm: 1 } // No border radius on mobile
+            }}>
                 {/* Post Header */}
                 <CardContent sx={{ pb: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

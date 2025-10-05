@@ -485,7 +485,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         sx={{ 
           pt: 2, 
           pb: isMobile ? 8 : 4, // Reduced bottom padding for smaller mobile nav
-          px: { xs: 1, sm: 2, md: 3 }
+          px: { 
+            xs: location.pathname === '/feed' || location.pathname === '/home' || location.pathname === '/' ? 0 : 1, 
+            sm: 2, 
+            md: 3 
+          } // No horizontal padding on mobile for feed/home pages
         }}
       >
         {children}
