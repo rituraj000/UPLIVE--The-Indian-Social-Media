@@ -323,7 +323,7 @@ const PostFeed: React.FC = () => {
           display: 'flex', 
           flexDirection: 'column',
           width: '100%',
-          gap: 4
+          gap: 2
         }}>
           {posts.map((post) => (
             <Post

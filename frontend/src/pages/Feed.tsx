@@ -273,10 +273,10 @@ const Feed: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 0, sm: 2 } }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 0, sm: 1 } }}>
           {posts.map((post) => (
             <Card key={post.id} sx={{ 
-              mb: { xs: 0, sm: 2 }, // No margin bottom on mobile
+              mb: { xs: 0, sm: 1 }, // Reduced margin bottom
               mx: { xs: 0, sm: 0 }, // No horizontal margin
               borderRadius: { xs: 0, sm: 1 } // No border radius on mobile
             }}>
