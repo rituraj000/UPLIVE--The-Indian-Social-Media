@@ -49,7 +49,25 @@ router.post("/", auth, upload.single("media"), async (req, res) => {
 // Get stories for feed
 router.get("/feed", auth, async (req, res) => {
   try {
-    const currentUser = await User.findById(req.user.userId);
+    console.log("🔍 Stories feed requested by user:", req.user.userId);
+    const currentUser = await User.findById(req.user.userId).populate(
+      "following",
+      "_id username"
+    );
+
+    if (!currentUser) {
+      console.log("❌ Current user not found");
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log("👤 Current user:", {
+      username: currentUser.username,
+      followingCount: currentUser.following?.length || 0,
+      following: currentUser.following?.map((u) => ({
+        id: u._id,
+        username: u.username,
+      })),
+    });
 
     // Get users whose stories should be visible in feed
     const visibleUserIds = [];
@@ -59,7 +77,32 @@ router.get("/feed", auth, async (req, res) => {
 
     // Include all users that current user follows
     // (If you follow someone, you should see their stories in feed regardless of privacy)
-    visibleUserIds.push(...currentUser.following);
+    if (currentUser.following && Array.isArray(currentUser.following)) {
+      currentUser.following.forEach((followedUser) => {
+        // Handle both populated and non-populated following arrays
+        const userId = followedUser._id || followedUser;
+        visibleUserIds.push(userId.toString());
+      });
+    }
+
+    console.log("👥 Visible user IDs for stories:", visibleUserIds);
+
+    // Get stories from visible users only
+    const feedStories = await Story.find({
+      user: { $in: visibleUserIds },
+      expiresAt: { $gt: new Date() },
+    })
+      .populate("user", "username profilePicture isPrivate")
+      .sort({ createdAt: -1 });
+
+    console.log("📖 Found stories:", {
+      totalStories: feedStories.length,
+      storiesByUser: feedStories.reduce((acc, story) => {
+        const username = story.user?.username || "Unknown";
+        acc[username] = (acc[username] || 0) + 1;
+        return acc;
+      }, {}),
+    });
 
     // Get stories from visible users only
     const stories = await Story.find({
@@ -71,7 +114,12 @@ router.get("/feed", auth, async (req, res) => {
 
     // Group stories by user
     const groupedStories = {};
-    stories.forEach((story) => {
+    feedStories.forEach((story) => {
+      if (!story.user) {
+        console.log("⚠️ Story found without user:", story._id);
+        return;
+      }
+
       const userId = story.user._id.toString();
       if (!groupedStories[userId]) {
         groupedStories[userId] = {
@@ -82,9 +130,11 @@ router.get("/feed", auth, async (req, res) => {
       }
 
       // Check if this story has been seen by current user
-      const hasViewed = story.viewers.some(
-        (viewer) => viewer.user.toString() === req.user.userId
-      );
+      const hasViewed =
+        story.viewers &&
+        story.viewers.some(
+          (viewer) => viewer.user && viewer.user.toString() === req.user.userId
+        );
 
       if (!hasViewed && story.user._id.toString() !== req.user.userId) {
         groupedStories[userId].hasUnseenStories = true;
@@ -93,10 +143,21 @@ router.get("/feed", auth, async (req, res) => {
       groupedStories[userId].stories.push(story);
     });
 
-    res.json(Object.values(groupedStories));
+    const result = Object.values(groupedStories);
+    console.log("✅ Returning story groups:", {
+      groupCount: result.length,
+      groups: result.map((g) => ({
+        username: g.user?.username,
+        storiesCount: g.stories?.length,
+        hasUnseen: g.hasUnseenStories,
+      })),
+    });
+
+    res.json(result);
   } catch (error) {
-    console.error("Get stories feed error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ Get stories feed error:", error);
+    console.error("❌ Error stack:", error.stack);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
@@ -133,7 +194,7 @@ router.get("/user/:userId", auth, async (req, res) => {
     }
 
     // Get user's active stories
-    const stories = await Story.find({
+    const userStories = await Story.find({
       user: userId,
       expiresAt: { $gt: new Date() },
     })
@@ -142,7 +203,7 @@ router.get("/user/:userId", auth, async (req, res) => {
 
     // Mark stories as viewed if not the owner
     if (userId !== currentUserId) {
-      for (const story of stories) {
+      for (const story of userStories) {
         const hasViewed = story.viewers.some(
           (viewer) => viewer.user.toString() === currentUserId
         );
@@ -159,8 +220,8 @@ router.get("/user/:userId", auth, async (req, res) => {
 
     res.json({
       user: targetUser,
-      stories: stories,
-      totalCount: stories.length,
+      stories: userStories,
+      totalCount: userStories.length,
     });
   } catch (error) {
     console.error("Get user stories error:", error);

@@ -615,6 +615,7 @@ router.get("/suggestions/for-you", auth, async (req, res) => {
       },
       {
         $project: {
+          _id: 1,
           username: 1,
           fullName: 1,
           profilePicture: 1,
@@ -641,9 +642,24 @@ router.get("/suggestions/for-you", auth, async (req, res) => {
       (suggestion) => suggestion._id.toString() !== currentUserId.toString()
     );
 
-    console.log("Filtered suggestions count:", filteredSuggestions.length);
+    // Transform _id to id for frontend consistency
+    const suggestionsWithId = filteredSuggestions.map((suggestion) => ({
+      ...suggestion,
+      id: suggestion._id.toString(),
+    }));
 
-    res.json(filteredSuggestions);
+    console.log("Filtered suggestions count:", filteredSuggestions.length);
+    console.log(
+      "Sample suggestion with ID:",
+      suggestionsWithId[0]
+        ? {
+            id: suggestionsWithId[0].id,
+            username: suggestionsWithId[0].username,
+          }
+        : "No suggestions"
+    );
+
+    res.json(suggestionsWithId);
   } catch (error) {
     console.error("Get suggestions error:", error);
     res.status(500).json({ message: "Server error" });
@@ -663,8 +679,21 @@ router.get("/discover/all", auth, async (req, res) => {
       .sort({ followerCount: -1 })
       .limit(50); // Limit to prevent too much data
 
+    // Transform _id to id for frontend consistency
+    const usersWithId = allUsers.map((user) => ({
+      ...user.toObject(),
+      id: user._id.toString(),
+    }));
+
     console.log("Found users:", allUsers.length);
-    res.json(allUsers);
+    console.log(
+      "Sample user with ID:",
+      usersWithId[0]
+        ? { id: usersWithId[0].id, username: usersWithId[0].username }
+        : "No users"
+    );
+
+    res.json(usersWithId);
   } catch (error) {
     console.error("Get all users error:", error);
     res.status(500).json({ message: "Server error" });
