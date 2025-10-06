@@ -30,6 +30,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const SuggestionsPage = lazy(() => import('./pages/SuggestionsPage'));
 const PostDemo = lazy(() => import('./pages/PostDemo'));
 const SavedPosts = lazy(() => import('./pages/SavedPosts'));
+const About = lazy(() => import('./pages/About'));
 
 // Components
 const EmailVerification = lazy(() => import('./components/EmailVerification'));
@@ -259,6 +260,7 @@ function App() {
                                 <Route path="/suggestions" element={<SuggestionsPage />} />
                                 <Route path="/post-demo" element={<PostDemo />} />
                                 <Route path="/saved-posts" element={<SavedPosts />} />
+                                <Route path="/about" element={<About />} />
                                 <Route path="/profile" element={<Profile />} />
                                 <Route path="/:username" element={<Profile />} />
                               </Routes>
