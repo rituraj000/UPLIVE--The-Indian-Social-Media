@@ -1,22 +1,26 @@
 import React from 'react';
-import { Box, Container } from '@mui/material';
+import { Box, Container, useMediaQuery, useTheme } from '@mui/material';
 import PostFeed from '../components/PostFeed';
 import StoriesBar from '../components/StoriesBar';
 import Sidebar from '../components/Sidebar';
 
 const Home: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
   return (
     <Container 
       maxWidth="lg" 
       sx={{ 
         py: 2,
+        px: { xs: 0, md: 3 }, // No horizontal padding on mobile
         bgcolor: 'background.default',
         minHeight: '100vh'
       }}
     >
       <Box sx={{ 
         display: 'flex', 
-        gap: 3, 
+        gap: { xs: 0, md: 3 }, // No gap on mobile
         minHeight: '100vh',
         position: 'relative'
       }}>
