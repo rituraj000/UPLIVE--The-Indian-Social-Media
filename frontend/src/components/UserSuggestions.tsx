@@ -6,20 +6,23 @@ import {
   Button,
   Paper,
   Skeleton,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { usersApi } from '../services/api';
+import { usersApi, followApi } from '../services/api';
 import { User } from '../types';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const UserSuggestions: React.FC = () => {
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshUser } = useAuth();
   const [suggestions, setSuggestions] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
+  const [followLoading, setFollowLoading] = useState<Set<string>>(new Set());
 
   // Helper function to check if user has a real profile picture
   const hasProfilePicture = (user: User): boolean => {
@@ -39,19 +42,35 @@ const UserSuggestions: React.FC = () => {
 
     try {
       setLoading(true);
+      console.log('🔍 Fetching suggestions for user:', currentUser.username);
       const response = await usersApi.getSuggestions();
       
+      console.log('📡 Suggestions API Response:', {
+        status: response.status,
+        dataType: typeof response.data,
+        isArray: Array.isArray(response.data),
+        length: response.data?.length,
+        data: response.data
+      });
+      
+      if (!Array.isArray(response.data)) {
+        console.error('❌ API returned non-array data:', response.data);
+        setError('Invalid data format received');
+        return;
+      }
+      
       console.log('Current user ID:', currentUser.id);
-      console.log('Raw suggestions:', response.data.map((u: User) => ({ id: u.id, username: u.username })));
+      console.log('Raw suggestions:', response.data);
       
       // Filter out current user and additional client-side sorting
       const filteredSuggestions = response.data
         .filter((user: User) => {
+          console.log('Checking user:', { id: user.id, username: user.username, hasId: !!user.id });
           const isCurrentUser = user.id === currentUser.id;
           if (isCurrentUser) {
             console.log('Filtering out current user:', user.username);
           }
-          return !isCurrentUser;
+          return !isCurrentUser && !!user.id; // Also filter out users without IDs
         })
         .sort((a: User, b: User) => {
           const aHasProfilePic = hasProfilePicture(a);
@@ -66,11 +85,19 @@ const UserSuggestions: React.FC = () => {
         });
       
       console.log('Filtered suggestions:', filteredSuggestions.map((u: User) => ({ id: u.id, username: u.username })));
+      console.log('Final suggestions count:', filteredSuggestions.length);
+      
       setSuggestions(filteredSuggestions.slice(0, 5)); // Show only 5 suggestions
       setError(null);
     } catch (err: any) {
-      console.error('Failed to fetch suggestions:', err);
-      setError('Failed to load suggestions');
+      console.error('❌ Failed to fetch suggestions:', err);
+      console.error('❌ Error details:', {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
+        stack: err.stack
+      });
+      setError(err.response?.data?.message || 'Failed to load suggestions');
     } finally {
       setLoading(false);
     }
@@ -79,9 +106,30 @@ const UserSuggestions: React.FC = () => {
     fetchSuggestions();
   }, [currentUser]);
 
-  const handleFollow = async (userId: string) => {
+  const handleFollow = async (userId: string, username: string) => {
+    console.log('🔍 handleFollow called with:', { userId, username, userIdType: typeof userId });
+    
+    if (!userId) {
+      console.error('❌ User ID is missing!');
+      toast.error('Unable to follow user - missing user ID');
+      return;
+    }
+    
+    if (followLoading.has(userId)) {
+      console.log('⏳ Already following this user...');
+      return; // Prevent multiple requests
+    }
+    
+    setFollowLoading(prev => new Set(prev).add(userId));
+    
     try {
-      await usersApi.followUser(userId);
+      console.log('🔔 Following user:', { userId, username });
+      
+      // Use followApi for consistency with other parts of the app
+      const response = await followApi.followUser(userId);
+      
+      console.log('✅ Follow response:', response.data);
+      
       setFollowingUsers(prev => {
         const newSet = new Set(prev);
         newSet.add(userId);
@@ -90,8 +138,27 @@ const UserSuggestions: React.FC = () => {
       
       // Remove the user from suggestions after following
       setSuggestions(prev => prev.filter(user => user.id !== userId));
+      
+      // Refresh current user data to update following count
+      await refreshUser();
+      
+      toast.success(`Now following ${username}!`);
+      
     } catch (err: any) {
-      console.error('Failed to follow user:', err);
+      console.error('❌ Failed to follow user:', err);
+      console.error('❌ Error details:', {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data
+      });
+      
+      toast.error(err.response?.data?.message || 'Failed to follow user');
+    } finally {
+      setFollowLoading(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
     }
   };
 
@@ -277,9 +344,17 @@ const UserSuggestions: React.FC = () => {
         </Button>
       </Box>
       
-      {suggestions.map((user) => (
+      {suggestions.map((user) => {
+        console.log('🧑 Rendering user:', { 
+          user: user, 
+          userId: user.id, 
+          userIdField: user.id,
+          alternativeIds: { _id: (user as any)._id, userId: (user as any).userId }
+        });
+        
+        return (
         <Box 
-          key={user.id} 
+          key={user.id || (user as any)._id} 
           sx={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -381,22 +456,22 @@ const UserSuggestions: React.FC = () => {
           <Button
             variant="text"
             size="small"
-            onClick={() => handleFollow(user.id)}
-            disabled={followingUsers.has(user.id)}
+            onClick={() => handleFollow(user.id || (user as any)._id, user.username)}
+            disabled={followingUsers.has(user.id || (user as any)._id) || followLoading.has(user.id || (user as any)._id)}
             sx={{
               textTransform: 'none',
               fontWeight: 600,
-              color: followingUsers.has(user.id) ? 'rgba(255, 255, 255, 0.5)' : '#FFFFFF',
+              color: followingUsers.has(user.id || (user as any)._id) ? 'rgba(255, 255, 255, 0.5)' : '#FFFFFF',
               minWidth: 'auto',
               px: 2,
               py: 0.5,
               fontSize: '0.85rem',
-              background: followingUsers.has(user.id) 
+              background: followingUsers.has(user.id || (user as any)._id) 
                 ? 'rgba(255, 255, 255, 0.1)' 
                 : 'linear-gradient(135deg, #A855F7 0%, #EC4899 100%)',
               borderRadius: 2,
               '&:hover': {
-                background: followingUsers.has(user.id)
+                background: followingUsers.has(user.id || (user as any)._id)
                   ? 'rgba(255, 255, 255, 0.15)'
                   : 'linear-gradient(135deg, #9333EA 0%, #DB2777 100%)',
                 transform: 'translateY(-1px)',
@@ -409,10 +484,17 @@ const UserSuggestions: React.FC = () => {
               transition: 'all 0.2s ease-in-out'
             }}
           >
-            {followingUsers.has(user.id) ? 'Following' : 'Follow'}
+            {followLoading.has(user.id || (user as any)._id) ? (
+              <CircularProgress size={16} sx={{ color: 'white' }} />
+            ) : followingUsers.has(user.id || (user as any)._id) ? (
+              'Following' 
+            ) : (
+              'Follow'
+            )}
           </Button>
         </Box>
-      ))}
+        );
+      })}
     </Paper>
   );
 };

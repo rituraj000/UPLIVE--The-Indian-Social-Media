@@ -1,8 +1,18 @@
 import React from 'react';
 import { Box, Typography, Paper, Link } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import UserSuggestions from './UserSuggestions';
 
 const Sidebar: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleLinkClick = (item: string) => {
+    if (item === 'About') {
+      navigate('/about');
+    }
+    // Add other link handlers here for Help, Press, API, Jobs, Privacy, Terms
+  };
+
   return (
     <Box sx={{ position: 'sticky', top: 20 }}>
       <UserSuggestions />
@@ -23,13 +33,17 @@ const Sidebar: React.FC = () => {
           {['About', 'Help', 'Press', 'API', 'Jobs', 'Privacy', 'Terms'].map((item) => (
             <Link
               key={item}
-              href="#"
+              component="button"
+              onClick={() => handleLinkClick(item)}
               variant="body2"
               sx={{ 
                 textDecoration: 'none',
                 color: 'rgba(255, 255, 255, 0.7)',
                 fontSize: '0.8rem',
                 fontWeight: 500,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
                 '&:hover': { 
                   textDecoration: 'underline',
                   color: '#A855F7'

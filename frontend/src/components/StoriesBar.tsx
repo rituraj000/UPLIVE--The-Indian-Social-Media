@@ -75,16 +75,49 @@ const StoriesBar: React.FC = () => {
     
     setFetchLoading(true);
     try {
+      console.log('🔍 StoriesBar: Fetching stories feed for user:', user.username);
       const response = await storiesApi.getFeed();
+      console.log('📡 Stories API Response:', {
+        status: response.status,
+        dataType: typeof response.data,
+        isArray: Array.isArray(response.data),
+        storyGroupCount: Array.isArray(response.data) ? response.data.length : 'Not array',
+        data: response.data
+      });
+      
+      // Log each story group
+      if (Array.isArray(response.data)) {
+        response.data.forEach((group, index) => {
+          console.log(`📖 Story Group ${index + 1}:`, {
+            username: group.user?.username,
+            userId: group.user?.id,
+            storiesCount: group.stories?.length,
+            hasUnseenStories: group.hasUnseenStories,
+            isCurrentUser: group.user?.id === user?.id
+          });
+        });
+      }
+      
       setStoryGroups(response.data);
     } catch (error: any) {
-      console.error('Failed to fetch stories:', error);
+      console.error('❌ Failed to fetch stories:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
     } finally {
       setFetchLoading(false);
     }
   };
 
   useEffect(() => {
+    console.log('👤 Current user in StoriesBar:', {
+      username: user?.username,
+      userId: user?.id,
+      followingCount: user?.following?.length,
+      following: user?.following?.map(u => ({ username: u.username, id: u.id }))
+    });
     fetchStories();
   }, [user]);
 
@@ -276,11 +309,12 @@ const StoriesBar: React.FC = () => {
 
   return (
     <Paper elevation={0} sx={{ 
-      mb: 3, 
-      borderRadius: '20px',
+      mb: { xs: 1, md: 3 }, // Small margin bottom on mobile for spacing
+      borderRadius: { xs: 0, md: '20px' }, // No border radius on mobile for full width
       background: 'rgba(31, 31, 53, 0.8)',
       backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      border: { xs: 'none', md: '1px solid rgba(255, 255, 255, 0.1)' }, // No border on mobile
+      borderBottom: { xs: '1px solid rgba(255, 255, 255, 0.1)', md: 'none' }, // Only bottom border on mobile
       overflow: 'hidden'
     }}>
       {/* Stories Container */}
