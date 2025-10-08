@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Container, Typography, styled } from '@mui/material';
+import { Box, Container, Typography, styled, useTheme, useMediaQuery } from '@mui/material';
 import PostFeed from '../components/PostFeed';
 import StoriesBar from '../components/StoriesBar';
 import Sidebar from '../components/Sidebar';
