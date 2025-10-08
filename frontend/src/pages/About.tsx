@@ -34,7 +34,7 @@ const About: React.FC = () => {
           elevation={0}
           sx={{ 
             p: { xs: 2, sm: 3, md: 4 },
-            bgcolor: '#1F1F35',
+            bgcolor: '#1F1F35', 
             borderRadius: { xs: 2, sm: 3 },
             boxShadow: '0 8px 32px rgba(168, 85, 247, 0.1)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
