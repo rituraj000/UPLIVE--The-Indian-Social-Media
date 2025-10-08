@@ -1,4 +1,4 @@
-const emailService = require("./sendGridEmailService"); // Use SendGrid instead of SMTP
+const emailService = require("./sendGridEmailService"); // Use SendGrid email service
 
 // Simple in-memory email queue (no Redis needed for development)
 class SimpleEmailQueue {

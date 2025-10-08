@@ -20,6 +20,9 @@ const Logo = styled(Typography)({
 });
 
 const Home: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
   return (
     <Container 
       maxWidth="lg" 
