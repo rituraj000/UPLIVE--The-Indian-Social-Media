@@ -2,13 +2,6 @@
 
 ## ✅ What's Been Configured
 
-### 1. Environment Variables Added
-Your `.env` file now contains:
-```env
-TWILIO_ACCOUNT_SID=AC2fb406f916df5c20bb4b0c7f59467dc9
-TWILIO_AUTH_TOKEN=ce2a22d6413610ca17898321c23f8b86
-TWILIO_PHONE_NUMBER=+15136549592
-```
 
 ### 2. Dependencies Installed
 - ✅ `twilio` - Official Twilio SDK
