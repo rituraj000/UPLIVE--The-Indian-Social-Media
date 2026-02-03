@@ -298,6 +298,18 @@ io.on("connection", (socket) => {
   });
 });
 
+// Root endpoint for uptime monitoring
+app.get("/", (req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.json({
+    message: "UPLIVE API is running!",
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    version: "1.0.0",
+  });
+});
+
 // Routes with error handling
 try {
   app.use("/api/auth", authLimiter, authRoutes);
